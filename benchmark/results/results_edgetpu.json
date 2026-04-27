@@ -1,0 +1,24 @@
+{
+  "model": "RepNeXt-M5 ADE20K",
+  "hardware": "RPi5 BCM2712, 4x Cortex-A76, 2x Coral USB",
+  "runs": 50,
+  "warmup": 10,
+  "requested_devices": [
+    0,
+    1
+  ],
+  "detected_edge_tpus": [
+    "{'type': 'usb', 'path': '/sys/bus/usb/devices/5-1'}",
+    "{'type': 'usb', 'path': '/sys/bus/usb/devices/3-1'}"
+  ],
+  "results": [
+    {
+      "mode": "tflite_int8_edgetpu_1x",
+      "error": "Could not open '/home/rpi5/repnext-pipeline/benchmark_edgetpu.tflite,:0'."
+    },
+    {
+      "mode": "tflite_int8_edgetpu_2x_data_parallel",
+      "error": "Could not open '/home/rpi5/repnext-pipeline/benchmark_edgetpu.tflite,:0'."
+    }
+  ]
+}

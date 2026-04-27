@@ -1,0 +1,50 @@
+{
+  "model": "RepNeXt-M5 ADE20K",
+  "hardware": "RPi5 BCM2712, 4x Cortex-A76, 2x Coral USB",
+  "runs": 50,
+  "warmup": 10,
+  "requested_devices": [
+    0,
+    1
+  ],
+  "detected_edge_tpus": [
+    "{'type': 'usb', 'path': '/sys/bus/usb/devices/5-1'}",
+    "{'type': 'usb', 'path': '/sys/bus/usb/devices/3-1'}"
+  ],
+  "results": [
+    {
+      "mode": "tflite_int8_edgetpu_1x",
+      "device": 0,
+      "avg_ms": 1426.471,
+      "min_ms": 1416.844,
+      "max_ms": 1465.491,
+      "p50_ms": 1426.016,
+      "p95_ms": 1434.213,
+      "n": 50,
+      "input": {
+        "shape": [
+          1,
+          512,
+          512,
+          3
+        ],
+        "dtype": "<class 'numpy.int8'>"
+      }
+    },
+    {
+      "mode": "tflite_int8_edgetpu_2x_data_parallel",
+      "devices": [
+        0,
+        1
+      ],
+      "avg_ms": 1613.991,
+      "min_ms": 1556.146,
+      "max_ms": 1692.171,
+      "p50_ms": 1608.607,
+      "p95_ms": 1667.748,
+      "n": 50,
+      "batch_size": 2,
+      "throughput_ips": 1.239
+    }
+  ]
+}

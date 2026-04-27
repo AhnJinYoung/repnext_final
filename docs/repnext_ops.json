@@ -1,0 +1,51 @@
+{
+  "model": "repnext_m5_ade20k.onnx",
+  "total_nodes": 1708,
+  "by_class": {
+    "OK": 1643,
+    "BAD": 55,
+    "RISKY": 10
+  },
+  "per_op": {
+    "Conv": {
+      "count": 822,
+      "class": "OK"
+    },
+    "Div": {
+      "count": 55,
+      "class": "OK"
+    },
+    "Erf": {
+      "count": 55,
+      "class": "BAD"
+    },
+    "Add": {
+      "count": 490,
+      "class": "OK"
+    },
+    "Mul": {
+      "count": 110,
+      "class": "OK"
+    },
+    "Split": {
+      "count": 51,
+      "class": "OK"
+    },
+    "Concat": {
+      "count": 54,
+      "class": "OK"
+    },
+    "BatchNormalization": {
+      "count": 54,
+      "class": "OK"
+    },
+    "Resize": {
+      "count": 10,
+      "class": "RISKY"
+    },
+    "Relu": {
+      "count": 7,
+      "class": "OK"
+    }
+  }
+}

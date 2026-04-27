@@ -1,0 +1,17 @@
+{
+  "model": "RepNeXt-M5 ADE20K",
+  "hardware": "RPi5 BCM2712, 4x Cortex-A76, 2x Coral USB",
+  "runs": 50,
+  "warmup": 10,
+  "results": [
+    {
+      "mode": "pytorch_cpu_4t",
+      "avg_ms": 4222.626,
+      "min_ms": 3812.209,
+      "max_ms": 4370.176,
+      "p50_ms": 4269.968,
+      "p95_ms": 4360.129,
+      "n": 50
+    }
+  ]
+}

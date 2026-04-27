@@ -1,0 +1,9 @@
+{
+  "model": "RepNeXt-M5 ADE20K",
+  "onnx": "repnext_m5_relu_tpu_stage2_downsample_512_simplified.onnx",
+  "tflite": "repnext_m5_ade20k_int8.tflite",
+  "size": 512,
+  "samples": 50,
+  "calib_dir": null,
+  "input_layout": "nhwc"
+}

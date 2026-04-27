@@ -96,3 +96,49 @@ python3 ~/repnext-pipeline/runs/20260427_iter1_tpu_search/tpu_compare_tflites.py
 
 ### Previous best
 - _없음_ (iter 1 신규 baseline; 친구의 4/24 1425 ms 는 같은 tflite 의 첫 측정으로 본 entry 의 일부)
+
+## Iter 3 candidate: 2-Coral pipeline split for stage2 partition
+
+**New fastest measured stage2-only TPU path: `edgetpu_compiler -n 2` split + TPU0 -> TPU1 pipeline —
+758.8 ms / p95 764.1 ms** (stage2 downsample partition only, not full E2E).
+
+Reproduction:
+```bash
+# WSL/host, because RPi5 compiler wrapper payload may be missing under /tmp
+edgetpu_compiler -s -n 2 -o iter3_segments/n2 \
+  repnext_m5_relu_sparse_stage2_downsample_512_int8_dwpatched.tflite
+
+# RPi5
+source ~/coral-env/bin/activate
+python ~/repnext-pipeline/benchmark.py \
+  --skip-pytorch --edgetpu __none__.tflite --tflite __none__.tflite \
+  --split-a ~/repnext-pipeline/iter3_stage2_seg0of2_edgetpu.tflite \
+  --split-b ~/repnext-pipeline/iter3_stage2_seg1of2_edgetpu.tflite \
+  --devices 0,1 --warmup 10 --runs 50 \
+  --out ~/repnext-pipeline/runs/20260427_iter3_pipeline_split_n2_50runs.json
+```
+
+Important caveat: compiler op mapping is poor after forced segmentation
+(27 TPU ops / 537 CPU ops total across the two segments), and the compiler warns that
+one segment is recommended. The measured latency is still strong for this isolated
+partition, but full BYOC E2E needs explicit tensor handoff/copy measurement.
+
+Iter 4 sweep:
+
+| split | avg ms | p95 ms | result |
+|---|---:|---:|---|
+| `-n 2` | **757.0** | **759.2** | best |
+| `-n 3` | 766.6 | 775.3 | slower |
+| `-n 4` | 772.9 | 779.4 | slower, multi-boundary chain |
+
+CPU TVM pass follow-up: `opt_level=3 --disabled-pass AlterOpLayout` measured
+796.8 ms / p95 813.0 ms, slower than the existing opt_level=3 baseline, so keep
+TVM's default layout rewrite enabled.
+
+Single-Coral layout rewrite follow-up:
+
+An exact `Transpose -> Concat -> inverse Transpose` rewrite removes 11 transpose ops
+while preserving byte-identical CPU TFLite output. This improves the single-Coral
+stage2 path from 1472.8 ms to **1365.4 ms**. It should be used for single-TPU
+deployment, but not for the current fastest two-TPU `-n 2` pipeline, where it measured
+slower at 768.5 ms.

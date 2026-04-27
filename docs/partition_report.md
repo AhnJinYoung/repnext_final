@@ -40,3 +40,45 @@ Pipeline split mode needs two compiled submodels with a compatible boundary tens
 ## CPU Fallback / BYOC Notes
 
 RepNeXt's expected fallback is GELU exported as `Erf`. The first mitigation to measure is tanh-GELU export or ReLU fine-tuning because removing CPU fallback transitions can beat TVM on tiny activation-only subgraphs. If fallback remains, TVM should be limited to large conv or matmul blocks and built for Cortex-A76 with cache-bounded schedules.
+
+## Iter 3 Segment Split Result
+
+Forced EdgeTPU compiler segmentation on the stage2 downsample TFLite was tested with
+`-n 2` and `-n 4`.
+
+| Configuration | Compile mapping | Measured latency |
+|---|---|---:|
+| single segment, 1x Coral | 448 TPU ops / 116 CPU ops | 1464.8 ms |
+| `-n 2`, TPU0 -> TPU1 sequential pipeline | 27 TPU ops / 537 CPU ops | **758.8 ms** |
+| `-n 4` | 48 TPU ops total, not benchmarked as a 4-stage chain | pending |
+
+The compiler warns that `num_segments=1` is recommended, and the split segments map
+poorly by op count. The measured two-Coral pipeline is still a useful BYOC candidate
+for this isolated partition, but full end-to-end validation must include host tensor
+copy and boundary conversion overhead.
+
+Iter 4 chain runner results:
+
+| Split | Avg latency | p95 | Boundary handling |
+|---|---:|---:|---|
+| `-n 2` | **757.0 ms** | **759.2 ms** | single tensor boundary |
+| `-n 3` | 766.6 ms | 775.3 ms | single tensor boundaries |
+| `-n 4` | 772.9 ms | 779.4 ms | multi-input/multi-output boundaries by tensor name |
+
+Measured tensor set/get/cast overhead was small (roughly 1-3 ms total depending on
+split count), so the slowdown from `-n 3` and `-n 4` is mostly extra segment execution
+and less favorable compiler partitioning rather than Python tensor copying.
+
+## Iter 5 Exact Layout Rewrite
+
+The safe rewrite target was `Transpose(p) -> Concat(axis=a) -> Transpose(inv_p)`.
+This was replaced with `Concat(axis=p[a])`, preserving tensor values exactly.
+
+| Model | Total ops | TRANSPOSE ops | EdgeTPU ops | CPU ops | Avg latency |
+|---|---:|---:|---:|---:|---:|
+| original stage2 single segment | 564 | 116 | 448 | 116 | 1472.8 ms |
+| concat-folded stage2 single segment | 553 | 105 | 448 | 105 | **1365.4 ms** |
+
+CPU TFLite output matched byte-for-byte after rewrite on a random int8 input. The
+same rewrite was not kept for the fastest `-n 2` chain because it changed the forced
+segment boundary and measured slower (768.5 ms vs 757.0 ms).

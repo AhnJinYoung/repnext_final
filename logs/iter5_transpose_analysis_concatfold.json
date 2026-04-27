@@ -1,0 +1,871 @@
+{
+  "file": "repnext_stage2_int8_dwpatched_concatfold.tflite",
+  "op_count": 553,
+  "transpose_count": 105,
+  "perms": {
+    "(0, 3, 1, 2)": 53,
+    "(0, 2, 3, 1)": 52
+  },
+  "prevops": {
+    "ADD": 40,
+    "SPLIT": 39,
+    "DEPTHWISE_CONV_2D": 13,
+    "CONCATENATION": 13
+  },
+  "nextops": {
+    "SPLIT": 13,
+    "DEPTHWISE_CONV_2D": 130,
+    "CONCATENATION": 39,
+    "MUL": 13,
+    "GRAPH_OUTPUT": 1
+  },
+  "identity": [],
+  "cancel_pairs": [],
+  "sample": [
+    {
+      "op_index": 31,
+      "perm": [
+        0,
+        3,
+        1,
+        2
+      ],
+      "input": 561,
+      "output": 562,
+      "prev": "ADD",
+      "next": [
+        "SPLIT"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 33,
+      "perm": [
+        0,
+        2,
+        3,
+        1
+      ],
+      "input": 564,
+      "output": 567,
+      "prev": "SPLIT",
+      "next": [
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D"
+      ],
+      "out_consumers": 4
+    },
+    {
+      "op_index": 41,
+      "perm": [
+        0,
+        3,
+        1,
+        2
+      ],
+      "input": 574,
+      "output": 575,
+      "prev": "ADD",
+      "next": [
+        "CONCATENATION"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 42,
+      "perm": [
+        0,
+        2,
+        3,
+        1
+      ],
+      "input": 565,
+      "output": 576,
+      "prev": "SPLIT",
+      "next": [
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D"
+      ],
+      "out_consumers": 5
+    },
+    {
+      "op_index": 54,
+      "perm": [
+        0,
+        3,
+        1,
+        2
+      ],
+      "input": 587,
+      "output": 588,
+      "prev": "ADD",
+      "next": [
+        "CONCATENATION"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 55,
+      "perm": [
+        0,
+        2,
+        3,
+        1
+      ],
+      "input": 566,
+      "output": 589,
+      "prev": "SPLIT",
+      "next": [
+        "DEPTHWISE_CONV_2D"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 58,
+      "perm": [
+        0,
+        3,
+        1,
+        2
+      ],
+      "input": 591,
+      "output": 592,
+      "prev": "DEPTHWISE_CONV_2D",
+      "next": [
+        "CONCATENATION"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 60,
+      "perm": [
+        0,
+        2,
+        3,
+        1
+      ],
+      "input": 593,
+      "output": 594,
+      "prev": "CONCATENATION",
+      "next": [
+        "MUL"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 66,
+      "perm": [
+        0,
+        3,
+        1,
+        2
+      ],
+      "input": 599,
+      "output": 600,
+      "prev": "ADD",
+      "next": [
+        "SPLIT"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 68,
+      "perm": [
+        0,
+        2,
+        3,
+        1
+      ],
+      "input": 602,
+      "output": 605,
+      "prev": "SPLIT",
+      "next": [
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D"
+      ],
+      "out_consumers": 4
+    },
+    {
+      "op_index": 76,
+      "perm": [
+        0,
+        3,
+        1,
+        2
+      ],
+      "input": 612,
+      "output": 613,
+      "prev": "ADD",
+      "next": [
+        "CONCATENATION"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 77,
+      "perm": [
+        0,
+        2,
+        3,
+        1
+      ],
+      "input": 603,
+      "output": 614,
+      "prev": "SPLIT",
+      "next": [
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D"
+      ],
+      "out_consumers": 5
+    },
+    {
+      "op_index": 89,
+      "perm": [
+        0,
+        3,
+        1,
+        2
+      ],
+      "input": 625,
+      "output": 626,
+      "prev": "ADD",
+      "next": [
+        "CONCATENATION"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 90,
+      "perm": [
+        0,
+        2,
+        3,
+        1
+      ],
+      "input": 604,
+      "output": 627,
+      "prev": "SPLIT",
+      "next": [
+        "DEPTHWISE_CONV_2D"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 93,
+      "perm": [
+        0,
+        3,
+        1,
+        2
+      ],
+      "input": 629,
+      "output": 630,
+      "prev": "DEPTHWISE_CONV_2D",
+      "next": [
+        "CONCATENATION"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 95,
+      "perm": [
+        0,
+        2,
+        3,
+        1
+      ],
+      "input": 631,
+      "output": 632,
+      "prev": "CONCATENATION",
+      "next": [
+        "MUL"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 101,
+      "perm": [
+        0,
+        3,
+        1,
+        2
+      ],
+      "input": 637,
+      "output": 638,
+      "prev": "ADD",
+      "next": [
+        "SPLIT"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 103,
+      "perm": [
+        0,
+        2,
+        3,
+        1
+      ],
+      "input": 640,
+      "output": 643,
+      "prev": "SPLIT",
+      "next": [
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D"
+      ],
+      "out_consumers": 4
+    },
+    {
+      "op_index": 111,
+      "perm": [
+        0,
+        3,
+        1,
+        2
+      ],
+      "input": 650,
+      "output": 651,
+      "prev": "ADD",
+      "next": [
+        "CONCATENATION"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 112,
+      "perm": [
+        0,
+        2,
+        3,
+        1
+      ],
+      "input": 641,
+      "output": 652,
+      "prev": "SPLIT",
+      "next": [
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D"
+      ],
+      "out_consumers": 5
+    },
+    {
+      "op_index": 124,
+      "perm": [
+        0,
+        3,
+        1,
+        2
+      ],
+      "input": 663,
+      "output": 664,
+      "prev": "ADD",
+      "next": [
+        "CONCATENATION"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 125,
+      "perm": [
+        0,
+        2,
+        3,
+        1
+      ],
+      "input": 642,
+      "output": 665,
+      "prev": "SPLIT",
+      "next": [
+        "DEPTHWISE_CONV_2D"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 128,
+      "perm": [
+        0,
+        3,
+        1,
+        2
+      ],
+      "input": 667,
+      "output": 668,
+      "prev": "DEPTHWISE_CONV_2D",
+      "next": [
+        "CONCATENATION"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 130,
+      "perm": [
+        0,
+        2,
+        3,
+        1
+      ],
+      "input": 669,
+      "output": 670,
+      "prev": "CONCATENATION",
+      "next": [
+        "MUL"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 136,
+      "perm": [
+        0,
+        3,
+        1,
+        2
+      ],
+      "input": 675,
+      "output": 676,
+      "prev": "ADD",
+      "next": [
+        "SPLIT"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 138,
+      "perm": [
+        0,
+        2,
+        3,
+        1
+      ],
+      "input": 678,
+      "output": 681,
+      "prev": "SPLIT",
+      "next": [
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D"
+      ],
+      "out_consumers": 4
+    },
+    {
+      "op_index": 146,
+      "perm": [
+        0,
+        3,
+        1,
+        2
+      ],
+      "input": 688,
+      "output": 689,
+      "prev": "ADD",
+      "next": [
+        "CONCATENATION"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 147,
+      "perm": [
+        0,
+        2,
+        3,
+        1
+      ],
+      "input": 679,
+      "output": 690,
+      "prev": "SPLIT",
+      "next": [
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D"
+      ],
+      "out_consumers": 5
+    },
+    {
+      "op_index": 159,
+      "perm": [
+        0,
+        3,
+        1,
+        2
+      ],
+      "input": 701,
+      "output": 702,
+      "prev": "ADD",
+      "next": [
+        "CONCATENATION"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 160,
+      "perm": [
+        0,
+        2,
+        3,
+        1
+      ],
+      "input": 680,
+      "output": 703,
+      "prev": "SPLIT",
+      "next": [
+        "DEPTHWISE_CONV_2D"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 163,
+      "perm": [
+        0,
+        3,
+        1,
+        2
+      ],
+      "input": 705,
+      "output": 706,
+      "prev": "DEPTHWISE_CONV_2D",
+      "next": [
+        "CONCATENATION"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 165,
+      "perm": [
+        0,
+        2,
+        3,
+        1
+      ],
+      "input": 707,
+      "output": 708,
+      "prev": "CONCATENATION",
+      "next": [
+        "MUL"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 171,
+      "perm": [
+        0,
+        3,
+        1,
+        2
+      ],
+      "input": 713,
+      "output": 714,
+      "prev": "ADD",
+      "next": [
+        "SPLIT"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 173,
+      "perm": [
+        0,
+        2,
+        3,
+        1
+      ],
+      "input": 716,
+      "output": 719,
+      "prev": "SPLIT",
+      "next": [
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D"
+      ],
+      "out_consumers": 4
+    },
+    {
+      "op_index": 181,
+      "perm": [
+        0,
+        3,
+        1,
+        2
+      ],
+      "input": 726,
+      "output": 727,
+      "prev": "ADD",
+      "next": [
+        "CONCATENATION"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 182,
+      "perm": [
+        0,
+        2,
+        3,
+        1
+      ],
+      "input": 717,
+      "output": 728,
+      "prev": "SPLIT",
+      "next": [
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D"
+      ],
+      "out_consumers": 5
+    },
+    {
+      "op_index": 194,
+      "perm": [
+        0,
+        3,
+        1,
+        2
+      ],
+      "input": 739,
+      "output": 740,
+      "prev": "ADD",
+      "next": [
+        "CONCATENATION"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 195,
+      "perm": [
+        0,
+        2,
+        3,
+        1
+      ],
+      "input": 718,
+      "output": 741,
+      "prev": "SPLIT",
+      "next": [
+        "DEPTHWISE_CONV_2D"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 198,
+      "perm": [
+        0,
+        3,
+        1,
+        2
+      ],
+      "input": 743,
+      "output": 744,
+      "prev": "DEPTHWISE_CONV_2D",
+      "next": [
+        "CONCATENATION"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 200,
+      "perm": [
+        0,
+        2,
+        3,
+        1
+      ],
+      "input": 745,
+      "output": 746,
+      "prev": "CONCATENATION",
+      "next": [
+        "MUL"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 206,
+      "perm": [
+        0,
+        3,
+        1,
+        2
+      ],
+      "input": 751,
+      "output": 752,
+      "prev": "ADD",
+      "next": [
+        "SPLIT"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 208,
+      "perm": [
+        0,
+        2,
+        3,
+        1
+      ],
+      "input": 754,
+      "output": 757,
+      "prev": "SPLIT",
+      "next": [
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D"
+      ],
+      "out_consumers": 4
+    },
+    {
+      "op_index": 216,
+      "perm": [
+        0,
+        3,
+        1,
+        2
+      ],
+      "input": 764,
+      "output": 765,
+      "prev": "ADD",
+      "next": [
+        "CONCATENATION"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 217,
+      "perm": [
+        0,
+        2,
+        3,
+        1
+      ],
+      "input": 755,
+      "output": 766,
+      "prev": "SPLIT",
+      "next": [
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D"
+      ],
+      "out_consumers": 5
+    },
+    {
+      "op_index": 229,
+      "perm": [
+        0,
+        3,
+        1,
+        2
+      ],
+      "input": 777,
+      "output": 778,
+      "prev": "ADD",
+      "next": [
+        "CONCATENATION"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 230,
+      "perm": [
+        0,
+        2,
+        3,
+        1
+      ],
+      "input": 756,
+      "output": 779,
+      "prev": "SPLIT",
+      "next": [
+        "DEPTHWISE_CONV_2D"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 233,
+      "perm": [
+        0,
+        3,
+        1,
+        2
+      ],
+      "input": 781,
+      "output": 782,
+      "prev": "DEPTHWISE_CONV_2D",
+      "next": [
+        "CONCATENATION"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 235,
+      "perm": [
+        0,
+        2,
+        3,
+        1
+      ],
+      "input": 783,
+      "output": 784,
+      "prev": "CONCATENATION",
+      "next": [
+        "MUL"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 274,
+      "perm": [
+        0,
+        3,
+        1,
+        2
+      ],
+      "input": 825,
+      "output": 826,
+      "prev": "ADD",
+      "next": [
+        "SPLIT"
+      ],
+      "out_consumers": 1
+    },
+    {
+      "op_index": 276,
+      "perm": [
+        0,
+        2,
+        3,
+        1
+      ],
+      "input": 828,
+      "output": 831,
+      "prev": "SPLIT",
+      "next": [
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D",
+        "DEPTHWISE_CONV_2D"
+      ],
+      "out_consumers": 4
+    }
+  ]
+}

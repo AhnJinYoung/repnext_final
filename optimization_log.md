@@ -94,3 +94,96 @@
   - `/home/rpi5/repnext-pipeline/repnext_m5_relu_tpu_stage2_downsample_512_simplified_kernelshape_full_integer_quant_edgetpu.log`
 - 유지: `~/repnext-pipeline/runs/20260427_iter1_*` (분석 자료), `runs/20260427_iter2_*`.
 - 로컬 `RepNeXt-tpu/*` legacy logs — best path 와 무관하지만 분석 자료라 보류.
+
+## iter 3 - 2026-04-27
+
+### TPU: EdgeTPU compiler segment split + 2-Coral pipeline
+- RPi5 runtime sees both Coral USB devices:
+  `/sys/bus/usb/devices/5-1`, `/sys/bus/usb/devices/3-1`.
+- RPi5 `edgetpu_compiler` wrapper is present, but its `/tmp/edgetpu_compiler_pkg/...`
+  payload is gone again. Segment compile was run in WSL with
+  `edgetpu_compiler v16.0.384591198`.
+- Input TFLite: `repnext_m5_relu_sparse_stage2_downsample_512_int8_dwpatched.tflite`.
+- `-n 2` result: segment 0 = 25 TPU ops / 395 CPU ops, segment 1 = 2 TPU ops / 142 CPU ops.
+- `-n 4` result: segment TPU ops = 25, 3, 2, 18. Compiler warns that `num_segments = 1`
+  is recommended.
+- Fixed PyCoral pipeline benchmark device binding from old `"model,:0"` style to
+  `make_interpreter(path, device="usb:N")`.
+- 2-segment sequential pipeline on TPU0 -> TPU1, warmup 10 / runs 50:
+  **avg 758.8 ms, p50 758.1 ms, p95 764.1 ms**.
+  Result: `benchmark/results/iter3_tpu_pipeline_split_n2_50runs.json`.
+- Interpretation: per-segment op mapping is poor, but the measured stage2 partition
+  latency is much faster than the previous single EdgeTPU 1464.8 ms. Need to validate
+  full BYOC handoff / tensor-copy overhead before calling this an E2E win.
+
+### CPU: TVM Relay stage2 opt_level=2
+- Same stage2 downsample ONNX, TVM 0.18, `opt_level=2`, warmup 5 / runs 20.
+- build 84.0 s, **avg 850.5 ms, p50 845.7 ms, p95 911.6 ms**.
+  Result: `benchmark/results/iter3_cpu_tvm_stage2_opt2.json`.
+- Existing `opt_level=3` stage2 baseline (783.9 ms) remains better. Next CPU work
+  should focus on partition-level MetaSchedule/AutoTVM rather than lowering global
+  Relay opt level.
+
+## iter 4 - 2026-04-27
+
+### TPU graph split sweep: n=2/3/4 chain benchmark
+- Added `benchmark/tpu_pipeline_chain.py` to run arbitrary sequential EdgeTPU segment
+  chains and report per-stage invoke time plus tensor set/get/cast overhead.
+- `n=4` compiler output has multi-input/multi-output boundaries, so the chain runner
+  now passes tensors by TFLite tensor name instead of assuming one output -> one input.
+- Same stage2 partition, warmup 10 / runs 50:
+  - `n=2`: **avg 757.0 ms, p95 759.2 ms**.
+    Stage invokes: 620.9 ms + 134.9 ms. Tensor transfer/set/get: 0.78 ms + 0.37 ms.
+  - `n=3`: avg 766.6 ms, p95 775.3 ms.
+    Stage invokes: 566.0 ms + 116.6 ms + 82.4 ms.
+  - `n=4`: avg 772.9 ms, p95 779.4 ms.
+    Stage invokes: 539.1 ms + 92.1 ms + 110.0 ms + 27.7 ms.
+- Result: forced split helps versus the single EdgeTPU path, but more than two segments
+  is slower. Current TPU graph best remains `-n 2` pipeline.
+
+### CPU TVM graph pass attempt: disable AlterOpLayout
+- Added `--disabled-pass` support to `benchmark/tvm_cpu_benchmark.py`.
+- Tested `opt_level=3 --disabled-pass AlterOpLayout` on the stage2 partition.
+- Result: build 114.8 s, **avg 796.8 ms, p95 813.0 ms**.
+- This is slower than the existing opt_level=3 baseline (783.9 ms), so TVM's default
+  `AlterOpLayout` should stay enabled for this graph. Simple Relay pass on/off did
+  not improve CPU speed.
+
+## iter 5 - 2026-04-27
+
+### Math-exact transpose layout rewrite
+- Added `conversion/analyze_transpose_tflite.py` to inspect TFLite transpose patterns.
+- Original stage2 TFLite:
+  - 564 ops total, 116 `TRANSPOSE`.
+  - Permutations: `(0,3,1,2)` x61 and `(0,2,3,1)` x55.
+  - No identity transpose and no direct inverse transpose cancellation pairs.
+- Added `conversion/rewrite_transpose_concat_tflite.py`.
+  - Rewrites exact `Transpose(p) -> Concat(axis=a) -> Transpose(inv_p)` islands into
+    `Concat(axis=p[a])`.
+  - Also checks `Transpose -> Split -> inverse Transpose` islands, but no safe split
+    islands matched on this graph.
+- Rewrite result:
+  - concat islands rewritten: 3.
+  - transpose ops removed: 11.
+  - op count: 564 -> 553.
+  - transpose count: 116 -> 105.
+- Mathematical integrity check:
+  - CPU TFLite original vs rewritten on the same random int8 input: byte-identical
+    output, `max_abs_diff=0`, `num_diff=0`.
+
+### EdgeTPU compile and latency
+- `edgetpu_compiler -s -a` on concat-folded model:
+  - total ops 553.
+  - EdgeTPU ops 448, CPU ops 105.
+  - `TRANSPOSE` CPU ops reduced from 116 to 105; mapped TPU op count unchanged.
+- Single Coral comparison, warmup 10 / runs 50:
+  - original: avg 1472.8 ms, p95 1542.4 ms.
+  - concat-folded: **avg 1365.4 ms, p95 1440.2 ms**.
+  - This is about a 7.3% latency improvement for the single-segment EdgeTPU path.
+- Forced `-n 2` pipeline on concat-folded model:
+  - avg 768.5 ms, p95 778.1 ms.
+  - Slower than original `-n 2` chain avg 757.0 ms, because the rewrite changes the
+    forced split boundary into a multi-output/multi-input handoff.
+- Current recommendation:
+  - use concat-fold rewrite for single EdgeTPU stage2 deployment.
+  - keep original `-n 2` split for the fastest two-Coral stage2 pipeline.

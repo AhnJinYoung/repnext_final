@@ -30,6 +30,8 @@ def main():
                     default="llvm -mtriple=aarch64-linux-gnu -mcpu=cortex-a76 "
                             "-mattr=+v8.2a,+fullfp16,+dotprod")
     ap.add_argument("--opt-level", type=int, default=3)
+    ap.add_argument("--disabled-pass", action="append", default=[],
+                    help="TVM pass name to disable; can be repeated")
     args = ap.parse_args()
 
     shape = tuple(int(x) for x in args.shape.split(","))
@@ -45,7 +47,7 @@ def main():
     target = tvm.target.Target(args.target)
     print(f"[build] target={target} opt={args.opt_level}", flush=True)
     t0 = time.perf_counter()
-    with tvm.transform.PassContext(opt_level=args.opt_level):
+    with tvm.transform.PassContext(opt_level=args.opt_level, disabled_pass=args.disabled_pass):
         lib = relay.build(mod, target=target, params=params)
     build_ms = (time.perf_counter() - t0) * 1000
     print(f"[build] done in {build_ms:.0f} ms", flush=True)
@@ -70,6 +72,7 @@ def main():
         "tvm_version": tvm.__version__,
         "target": args.target,
         "opt_level": args.opt_level,
+        "disabled_pass": args.disabled_pass,
         "shape": list(shape),
         "warmup": args.warmup,
         "runs": args.runs,

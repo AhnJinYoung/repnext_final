@@ -143,8 +143,8 @@ def list_edgetpu_devices():
 def bench_edgetpu_pipeline(split_a, split_b, warmup, runs, devices):
     from pycoral.utils.edgetpu import make_interpreter
 
-    first = make_interpreter(f"{split_a},:{devices[0]}")
-    second = make_interpreter(f"{split_b},:{devices[1]}")
+    first = make_interpreter(str(split_a), device=f"usb:{devices[0]}")
+    second = make_interpreter(str(split_b), device=f"usb:{devices[1]}")
     first.allocate_tensors()
     second.allocate_tensors()
     first_in = first.get_input_details()[0]

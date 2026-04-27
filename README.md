@@ -162,3 +162,32 @@ PyTorch CPU baseline (4-thread): [`benchmark/benchmark_local.py`](benchmark/benc
 - [`docs/partition_report.md`](docs/partition_report.md) — 모델 partition 전략과 op-level 진단
 - [`docs/repnext_ops.json`](docs/repnext_ops.json) — op 통계
 - 상위 프로젝트 핸드오프: `MoviNet-optimization-with-tvm/rpi5_coral_tvm_handoff/HANDOFF_RPI5_CORAL_REPNEXT_DEPTHANYTHING.md`
+
+---
+
+## Iter 3 Snapshot
+
+| Mode | avg (ms) | p50 | p95 | throughput |
+|------|---------:|----:|----:|-----------:|
+| Coral USB TPU x2 pipeline split, 2 segments | **758.8** | **758.1** | **764.1** | 1.32 ips |
+| TVM CPU stage2 partition, opt_level=2 | 850.5 | 845.7 | 911.6 | 1.18 ips |
+| Coral USB TPU x2 pipeline chain, n=2 (iter 4) | **757.0** | **757.2** | **759.2** | 1.32 ips |
+| Coral USB TPU x2 pipeline chain, n=3 (iter 4) | 766.6 | 765.9 | 775.3 | 1.30 ips |
+| Coral USB TPU x2 pipeline chain, n=4 (iter 4) | 772.9 | 771.4 | 779.4 | 1.29 ips |
+| TVM CPU stage2 opt3 without AlterOpLayout (iter 4) | 796.8 | 796.4 | 813.0 | 1.26 ips |
+| Coral USB TPU x1 concat-layout rewrite (iter 5) | **1365.4** | **1348.8** | **1440.2** | 0.73 ips |
+| Coral USB TPU x2 concat-layout rewrite + n=2 chain (iter 5) | 768.5 | 766.1 | 778.1 | 1.30 ips |
+
+Notes:
+- `edgetpu_compiler -n 2` and `-n 4` both warn that one segment is recommended.
+- Even with poor per-segment TPU op mapping, the measured 2-Coral sequential pipeline
+  for the stage2 partition is faster than the previous single-segment EdgeTPU latency.
+- TVM opt_level=2 is slower than the existing opt_level=3 stage2 baseline, so CPU
+  work should move toward partition-level tuning rather than lowering global opt level.
+- iter 4 confirms `n=2` is the best forced segment split. `n=3` and `n=4` add boundary
+  complexity and are slower. Disabling TVM `AlterOpLayout` is also slower than the
+  existing opt_level=3 baseline.
+- iter 5 folds exact `Transpose -> Concat -> inverse Transpose` islands. This removes
+  11 transpose ops (116 -> 105) with byte-identical CPU TFLite output. It improves
+  single EdgeTPU latency by about 7.3%, but makes the forced `n=2` chain slower than
+  the original `n=2` chain because the split boundary changes shape/count.

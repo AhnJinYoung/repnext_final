@@ -69,23 +69,33 @@ def bench_tflite_cpu(model_path, warmup, runs, threads):
 
 def bench_edgetpu(model_path, warmup, runs, device):
     from pycoral.utils.edgetpu import make_interpreter
+    import gc
 
-    suffix = f":{device}" if device is not None else ""
-    interp = make_interpreter(f"{model_path},{suffix}" if suffix else str(model_path))
+    dev_arg = f"usb:{device}" if device is not None else None
+    interp = make_interpreter(str(model_path), device=dev_arg)
     stats, input_meta = bench_interpreter(interp, warmup, runs)
+    del interp
+    gc.collect()
+    time.sleep(1.0)
     return {"mode": "tflite_int8_edgetpu_1x", "device": device, **stats, "input": input_meta}
 
 
 def bench_edgetpu_data_parallel(model_path, warmup, runs, devices):
     from pycoral.utils.edgetpu import make_interpreter
 
-    interpreters = [make_interpreter(f"{model_path},:{dev}") for dev in devices]
-    for interp in interpreters:
-        interp.allocate_tensors()
+    interpreters = []
     inputs = []
-    for interp in interpreters:
+    for dev in devices:
+        interp = make_interpreter(str(model_path), device=f"usb:{dev}")
+        interp.allocate_tensors()
         info = interp.get_input_details()[0]
-        inputs.append((info["index"], make_input(info["shape"], info["dtype"])))
+        x = make_input(info["shape"], info["dtype"])
+        for _ in range(3):
+            interp.set_tensor(info["index"], x)
+            interp.invoke()
+        interpreters.append(interp)
+        inputs.append((info["index"], x))
+        time.sleep(0.5)
 
     def invoke(interp, item):
         input_idx, x = item
@@ -123,8 +133,8 @@ def bench_edgetpu_data_parallel(model_path, warmup, runs, devices):
 def bench_edgetpu_pipeline(split_a, split_b, warmup, runs, devices):
     from pycoral.utils.edgetpu import make_interpreter
 
-    first = make_interpreter(f"{split_a},:{devices[0]}")
-    second = make_interpreter(f"{split_b},:{devices[1]}")
+    first = make_interpreter(str(split_a), device=f"usb:{devices[0]}")
+    second = make_interpreter(str(split_b), device=f"usb:{devices[1]}")
     first.allocate_tensors()
     second.allocate_tensors()
     first_in = first.get_input_details()[0]

@@ -1,0 +1,21 @@
+Edge TPU Compiler version 16.0.384591198
+Input: logs/iter5_concatfold_n2/repnext_stage2_int8_dwpatched_concatfold_segment_0_of_2.tflite
+Output: logs/iter5_concatfold_n2/repnext_stage2_int8_dwpatched_concatfold_segment_0_of_2_edgetpu.tflite
+
+Operator                       Count      Status
+
+CONV_2D                        4          Mapped to Edge TPU
+CONV_2D                        21         More than one subgraph is not supported
+MUL                            11         More than one subgraph is not supported
+MUL                            1          Mapped to Edge TPU
+DEPTHWISE_CONV_2D              13         Mapped to Edge TPU
+DEPTHWISE_CONV_2D              141        More than one subgraph is not supported
+TRANSPOSE                      80         Operation is otherwise supported, but not mapped due to some unspecified limitation
+CONCATENATION                  11         More than one subgraph is not supported
+CONCATENATION                  1          Mapped to Edge TPU
+PAD                            2          Mapped to Edge TPU
+PAD                            10         More than one subgraph is not supported
+SPLIT                          1          Mapped to Edge TPU
+SPLIT                          10         More than one subgraph is not supported
+ADD                            9          Mapped to Edge TPU
+ADD                            97         More than one subgraph is not supported

@@ -1,0 +1,23 @@
+{
+  "model": "RepNeXt-M5 ADE20K (full)",
+  "tag": "iter1_pytorch_compile_full",
+  "framework": "PyTorch",
+  "torch_version": "2.8.0+cpu",
+  "mode": "compile",
+  "threads": 4,
+  "shape": [
+    1,
+    3,
+    512,
+    512
+  ],
+  "warmup": 10,
+  "runs": 50,
+  "compile_setup_ms": 4396.619295000164,
+  "first_run_ms": 92199.66474199986,
+  "avg_ms": 2608.0108304000255,
+  "min_ms": 2410.8019149998654,
+  "max_ms": 2726.0861969998587,
+  "p50_ms": 2625.641163999944,
+  "p95_ms": 2706.5118360500037
+}

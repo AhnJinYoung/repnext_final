@@ -1,0 +1,37 @@
+{
+  "tflite": "/home/rpi5/repnext-pipeline/repnext_stage2_int8_dwpatched_edgetpu.tflite",
+  "sha8": "ea017c4a67cabd7c",
+  "tag": "iter2_tpu_2x",
+  "warmup": 10,
+  "runs": 50,
+  "results": {
+    "device0_only": {
+      "avg_ms": 1466.2093224799721,
+      "min_ms": 1425.546225999824,
+      "max_ms": 1560.1618559999224,
+      "p50_ms": 1454.0819614996963,
+      "p95_ms": 1529.9533911499566,
+      "n": 50,
+      "throughput_ips": 0.6820308564868367
+    },
+    "device1_only": {
+      "avg_ms": 1489.5545596600098,
+      "min_ms": 1440.823619999719,
+      "max_ms": 1583.0138970000007,
+      "p50_ms": 1483.1937144999756,
+      "p95_ms": 1567.8069724999432,
+      "n": 50,
+      "throughput_ips": 0.671341639361132
+    },
+    "data_parallel_2x": {
+      "avg_ms": 1739.5597423999789,
+      "min_ms": 1659.6344970002974,
+      "max_ms": 1853.4739500000796,
+      "p50_ms": 1735.858632999907,
+      "p95_ms": 1826.6422105496304,
+      "n": 50,
+      "throughput_ips": 1.149716190396948,
+      "note": "n_per_iter=2 (one infer per device per iteration)"
+    }
+  }
+}

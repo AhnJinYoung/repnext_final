@@ -45,15 +45,52 @@
 
 ---
 
+## iter 2 — 2026-04-27
+
+### CPU 실험: TVM Relay full RepNeXt-M5 (no tuning)
+- 입력: `repnext_m5_ade20k_relu_sparse_equiv_simplified_kernelshape.onnx` (103 MB,
+  Pi5 로 scp).
+- target/opt 동일: `cortex-a76 +v8.2a +fullfp16 +dotprod`, opt_level=3.
+- **결과: 빌드는 532 s 에 성공, 그러나 첫 inference 가 22 분이 지나도 끝나지 않아 budget
+  초과(30분) 시점에 kill.** 결과: `iter2_cpu_tvm_full_FAILED.json`.
+- 원인 가설: AutoTVM/MetaSchedule 으로 full-model conv 들의 schedule 이 등록되어 있지
+  않아 default fallback schedule 이 catastrophic 하게 느림. stage2 partition (783 ms)
+  은 잘 돌아갔던 것과 대조 — 이전 단계(stem/stage0/stage1) 의 큰 spatial conv 가 병목으로 추정.
+- iter 3 가설: opt_level=2 로 fallback 줄이고, `relay.transform.SimplifyInference`,
+  `FoldConstant`, `FuseOps(fuse_opt_level=2)` 적용 후 재측정.
+  안 되면 MetaSchedule short tune 32 trials × top-K task.
+
+### TPU 실험: dual-Coral 2× data-parallel (그래프 레벨)
+- best tflite (`repnext_stage2_int8_dwpatched_edgetpu.tflite`) 를 device 0/1 에 동시 로드,
+  threading 으로 병렬 invoke. warmup 10, runs 50.
+- 결과: `iter2_tpu_2x_dataparallel.json`
+  - device0 only: 1466 ms (p95 1530)
+  - device1 only: 1490 ms (p95 1568)
+  - 2× parallel wallclock/iter: 1740 ms (p95 1827) → **throughput 1.15 ips**
+- 친구의 4/24 측정 (1614 ms / 1.24 ips) 보다 약간 저조 — USB hub 전력/온도 차이로 추정.
+  TPU best (1× latency 1465 ms) 는 미갱신, 단 2× throughput 데이터 신규 추가.
+
+### 다음 가설 (iter 3)
+- **CPU**: TVM 빌드 옵션을 opt_level=2 로 낮추고 `SimplifyInference` + `FoldConstant`
+  적용한 full-model 재측정. 또한 stage 단위 pipeline 모듈(stage0/1/2 각각 컴파일 후 PyTorch
+  로 sequential dispatch) 로 빠른 반쪽 답 확보.
+- **TPU**: edgetpu_compiler 재설치 후, `--num_segments 2/4` 로 multi-segment
+  분할이 단일 segment 대비 latency 어떻게 바뀌는지 측정. 컴파일러 재설치 못 하면 입력 해상도 sweep
+  (256/384/512) 측정으로 latency vs accuracy trade-off 데이터 수집.
+
+---
+
 ## Pruned (deprecated 산출물 삭제 기록)
 
 ### iter 1 — 2026-04-27
-- **삭제 대상으로 표시 (실 삭제는 iter 2 에서):**
+- 삭제 대상 표시 (실 삭제는 iter 2 에서 수행):
   - `~/repnext-pipeline/repnext_m5_relu_tpu_stage2_downsample_512_simplified_kernelshape_full_integer_quant_edgetpu.tflite`
-    (1.9 MB) — invoke 시 input 누락 에러, 사용 불가.
+    — invoke 실패.
   - `~/repnext-pipeline/repnext_m5_relu_tpu_stage2_downsample_512_simplified_kernelshape_full_integer_quant_edgetpu.log`
-- **삭제 보류:**
-  - `~/repnext-pipeline/repnext_m5_relu_tpu_stage2_downsample_512_simplified_kernelshape.onnx`
-    (6.3 MB, current best 의 source) — 유지.
-  - 로컬 `RepNeXt-tpu/*` legacy logs — best path 와 무관하지만 분석 자료라 유지.
-    iter 3 이후 best path 가 안정되면 일괄 정리.
+
+### iter 2 — 2026-04-27
+- **RPi5 에서 실 삭제 수행 (`rm`):**
+  - `/home/rpi5/repnext-pipeline/repnext_m5_relu_tpu_stage2_downsample_512_simplified_kernelshape_full_integer_quant_edgetpu.tflite` (1.9 MB)
+  - `/home/rpi5/repnext-pipeline/repnext_m5_relu_tpu_stage2_downsample_512_simplified_kernelshape_full_integer_quant_edgetpu.log`
+- 유지: `~/repnext-pipeline/runs/20260427_iter1_*` (분석 자료), `runs/20260427_iter2_*`.
+- 로컬 `RepNeXt-tpu/*` legacy logs — best path 와 무관하지만 분석 자료라 보류.

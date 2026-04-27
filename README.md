@@ -132,6 +132,11 @@ PyTorch CPU baseline (4-thread): [`benchmark/benchmark_local.py`](benchmark/benc
 | Coral USB TPU ×1 (device 0) | 1425.2 | 1423.9 | 1438.0 | 0.70 ips |
 | Coral USB TPU ×1 (device 1) | 1428.3 | 1424.6 | 1453.1 | 0.70 ips |
 | Coral USB TPU ×2 data-parallel | 1614.0 | 1608.6 | 1667.7 | **1.24 ips** |
+| **PyTorch torch.compile (full, iter 1)** | **2608.0** | **2625.6** | **2706.5** | 0.38 ips |
+| TVM CPU (stage2 partition only, iter 1) | 783.9 | 785.0 | 803.4 | 1.28 ips |
+| Coral USB TPU ×1 (re-measured iter 1) | 1464.8 | 1454.1 | 1523.8 | 0.68 ips |
+| Coral USB TPU ×2 data-parallel (iter 2) | 1739.6 | 1735.9 | 1826.6 | 1.15 ips |
+| TVM CPU (full model, iter 2) | _build OK 532s, inference timeout_ | — | — | — |
 
 원본 JSON: [`benchmark/results/`](benchmark/results/).
 

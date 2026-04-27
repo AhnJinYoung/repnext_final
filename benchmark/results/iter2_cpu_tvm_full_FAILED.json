@@ -1,0 +1,14 @@
+{
+  "model": "RepNeXt-M5 ADE20K (full)",
+  "tag": "iter2_cpu_tvm_full",
+  "framework": "TVM",
+  "tvm_version": "0.18.0",
+  "target": "llvm -mtriple=aarch64-linux-gnu -mcpu=cortex-a76 -mattr=+v8.2a,+fullfp16,+dotprod",
+  "opt_level": 3,
+  "shape": [1, 3, 512, 512],
+  "status": "killed",
+  "build_ms": 532010,
+  "stage_reached": "build_ok_then_inference_stalled",
+  "wallclock_before_kill_s": 1920,
+  "note": "Build completed in 532s. Subsequent graph_executor.GraphModule(...).run() did not produce a single inference within ~22 minutes after build. Killed (pid 5267) once iteration budget exceeded. Most likely: untuned full-model conv kernels are catastrophically slow (no AutoTVM/MetaSchedule schedules registered for these shapes). Next iteration: opt_level=2 + relay.transform.SimplifyInference, or apply MetaSchedule short tuning (32 trials per task)."
+}

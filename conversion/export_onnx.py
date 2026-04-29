@@ -12,7 +12,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-REPO_MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "RepNeXt", "model")
+CONVERSION_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_MODEL_PATH = os.path.join(CONVERSION_DIR, "RepNeXt", "model")
+if not os.path.isdir(REPO_MODEL_PATH):
+    REPO_MODEL_PATH = os.path.abspath(
+        os.path.join(CONVERSION_DIR, "..", "..", "RepNeXt-tpu", "RepNeXt", "model")
+    )
 sys.path.insert(0, REPO_MODEL_PATH)
 
 TPU_FRIENDLY_DOWNSAMPLE = False

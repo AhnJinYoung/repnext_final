@@ -1,0 +1,26 @@
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1777441141.107493     442 cuda_dnn.cc:8579] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+E0000 00:00:1777441141.115519     442 cuda_blas.cc:1407] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+W0000 00:00:1777441141.141190     442 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1777441141.141258     442 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1777441141.141263     442 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1777441141.141265     442 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+[0;93m2026-04-29 14:39:04.170206755 [W:onnxruntime:Default, device_discovery.cc:164 DiscoverDevicesForPlatform] GPU device discovery failed: device_discovery.cc:89 ReadFileContents Failed to open file: "/sys/class/drm/card0/device/vendor"[m
+Traceback (most recent call last):
+  File "/home/jinwoojang/edgetpu-tf212-env/bin/onnx2tf", line 6, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/jinwoojang/edgetpu-tf212-env/lib/python3.11/site-packages/onnx2tf/onnx2tf.py", line 4368, in main
+    model = convert(
+            ^^^^^^^^
+  File "/home/jinwoojang/edgetpu-tf212-env/lib/python3.11/site-packages/onnx2tf/onnx2tf.py", line 2240, in convert
+    test_data: np.ndarray = download_test_image_data()
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jinwoojang/edgetpu-tf212-env/lib/python3.11/site-packages/onnx2tf/utils/common_functions.py", line 4781, in download_test_image_data
+    test_image_data: np.ndarray = np.load(f)
+                                  ^^^^^^^^^^
+  File "/home/jinwoojang/edgetpu-tf212-env/lib/python3.11/site-packages/numpy/lib/npyio.py", line 462, in load
+    raise ValueError("Cannot load file containing pickled data "
+ValueError: Cannot load file containing pickled data when allow_pickle=False
+Command exited with non-zero status 1
+elapsed=0:07.49

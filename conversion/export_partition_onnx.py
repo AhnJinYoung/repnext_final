@@ -47,7 +47,7 @@ def main():
         default="stem",
     )
     parser.add_argument("--stage2-blocks", type=int, default=0)
-    parser.add_argument("--activation", choices=["relu", "gelu", "tanh-gelu"], default="relu")
+    parser.add_argument("--activation", choices=["relu", "gelu", "tanh-gelu"], default="tanh-gelu")
     parser.add_argument("--tpu-friendly-downsample", action="store_true")
     parser.add_argument("--sparse-equiv-downsample", action="store_true")
     args = parser.parse_args()

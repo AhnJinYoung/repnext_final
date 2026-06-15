@@ -1,0 +1,24 @@
+[cmd] /workspace/tvm/local-convert-env/bin/onnx2tf -i artifacts/w48_tpu/repnext_m5_tanhgelu_real_full_256_logits.onnx -o artifacts/w48_tpu/onnx2tf_tanhgelu_256_logits -dsm -n -oiqt -iqd int8 -oqd int8 -cind input artifacts/calib/calib_real_256_nhwc_float32.npy [[[[0.0]]]] [[[[1.0]]]]
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1781530480.745129  425272 cuda_dnn.cc:8579] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+E0000 00:00:1781530480.755669  425272 cuda_blas.cc:1407] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+W0000 00:00:1781530480.796059  425272 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1781530480.796188  425272 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1781530480.796759  425272 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1781530480.797042  425272 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+Traceback (most recent call last):
+  File "/workspace/tvm/local-convert-env/bin/onnx2tf", line 8, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/workspace/tvm/local-convert-env/lib/python3.12/site-packages/onnx2tf/onnx2tf.py", line 4368, in main
+    model = convert(
+            ^^^^^^^^
+  File "/workspace/tvm/local-convert-env/lib/python3.12/site-packages/onnx2tf/onnx2tf.py", line 2240, in convert
+    test_data: np.ndarray = download_test_image_data()
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/tvm/local-convert-env/lib/python3.12/site-packages/onnx2tf/utils/common_functions.py", line 4781, in download_test_image_data
+    test_image_data: np.ndarray = np.load(f)
+                                  ^^^^^^^^^^
+  File "/workspace/tvm/local-convert-env/lib/python3.12/site-packages/numpy/lib/npyio.py", line 462, in load
+    raise ValueError("Cannot load file containing pickled data "
+ValueError: Cannot load file containing pickled data when allow_pickle=False

@@ -1,0 +1,17 @@
+Edge TPU Compiler version 16.0.384591198
+Input: artifacts/full_repnext/repnext_m5_tanhgelu_real_full_96_logits_full_integer_quant_dwpatched.tflite
+Output: artifacts/full_repnext/repnext_m5_tanhgelu_real_full_96_logits_full_integer_quant_dwpatched_edgetpu.tflite
+
+Operator                       Count      Status
+
+ADD                            599        Mapped to Edge TPU
+TRANSPOSE                      414        Mapped to Edge TPU
+MUL                            330        Mapped to Edge TPU
+CONV_2D                        126        Mapped to Edge TPU
+RESIZE_BILINEAR                6          Mapped to Edge TPU
+RESIZE_NEAREST_NEIGHBOR        3          Mapped to Edge TPU
+DEPTHWISE_CONV_2D              696        Mapped to Edge TPU
+PAD                            32         Mapped to Edge TPU
+CONCATENATION                  54         Mapped to Edge TPU
+TANH                           55         Mapped to Edge TPU
+STRIDED_SLICE                  204        Mapped to Edge TPU

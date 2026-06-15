@@ -1,0 +1,8 @@
+[cmd] /workspace/tvm/local-convert-env/bin/onnx2tf -i artifacts/full_repnext/repnext_m5_tanhgelu_real_full_256_logits.onnx -o artifacts/full_repnext/onnx2tf_tanhgelu_256_logits -dsm -n -oiqt -iqd int8 -oqd int8 -cind input artifacts/calib/calib_real_256_nhwc_float32.npy [[[[0.0]]]] [[[[1.0]]]]
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1781532321.648021  453934 cuda_dnn.cc:8579] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+E0000 00:00:1781532321.657919  453934 cuda_blas.cc:1407] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+W0000 00:00:1781532321.693609  453934 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1781532321.693753  453934 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1781532321.693765  453934 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1781532321.693771  453934 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.

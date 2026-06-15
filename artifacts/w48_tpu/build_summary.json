@@ -1,0 +1,16 @@
+{
+  "192": {
+    "size": 192,
+    "tflite": "artifacts/w48_tpu/repnext_m5_tanhgelu_real_full_192_logits_full_integer_quant_dwpatched.tflite",
+    "calib": "artifacts/calib/calib_real_192_nhwc_float32.npy",
+    "export_rc": 0,
+    "convert_rc": 1
+  },
+  "256": {
+    "size": 256,
+    "tflite": "artifacts/w48_tpu/repnext_m5_tanhgelu_real_full_256_logits_full_integer_quant_dwpatched.tflite",
+    "calib": "artifacts/calib/calib_real_256_nhwc_float32.npy",
+    "export_rc": 0,
+    "convert_rc": 1
+  }
+}

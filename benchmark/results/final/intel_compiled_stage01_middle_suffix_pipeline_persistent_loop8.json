@@ -1,0 +1,81 @@
+{
+  "model": "RepNeXt-M5 ReLU sparse compiled local pipeline persistent requests",
+  "output_shapes": {
+    "logits": [
+      1,
+      150,
+      512,
+      512
+    ]
+  },
+  "parts": {
+    "dequantize_stage2_ms": {
+      "count": 50,
+      "max_ms": 8.526395002263598,
+      "mean_ms": 1.2026140588568524,
+      "median_ms": 0.8923659988795407,
+      "min_ms": 0.43855099647771567,
+      "p90_ms": 1.4681309985462576,
+      "p95_ms": 2.2313290101010352
+    },
+    "middle_tflite_cpu_ms": {
+      "count": 50,
+      "max_ms": 63.09574500482995,
+      "mean_ms": 25.834235780057497,
+      "median_ms": 24.581355501140933,
+      "min_ms": 13.825974994688295,
+      "p90_ms": 33.947429998079315,
+      "p95_ms": 47.69194999244064
+    },
+    "quantize_stage1_ms": {
+      "count": 50,
+      "max_ms": 16.241204997641034,
+      "mean_ms": 6.533928080170881,
+      "median_ms": 4.941459497786127,
+      "min_ms": 2.889841009164229,
+      "p90_ms": 11.773140999139287,
+      "p95_ms": 14.399634004803374
+    },
+    "stage01_openvino_ms": {
+      "count": 50,
+      "max_ms": 769.5410169981187,
+      "mean_ms": 445.318943100865,
+      "median_ms": 441.4749269999447,
+      "min_ms": 255.4577929986408,
+      "p90_ms": 565.9056780132232,
+      "p95_ms": 643.6203360062791
+    },
+    "suffix_openvino_ms": {
+      "count": 50,
+      "max_ms": 4189.534368997556,
+      "mean_ms": 1729.9967365004704,
+      "median_ms": 1640.9274130055564,
+      "min_ms": 1024.3792169931112,
+      "p90_ms": 2121.6829080076423,
+      "p95_ms": 2629.841572997975
+    }
+  },
+  "runtime": "OpenVINO stage01 + LiteRT INT8 middle + OpenVINO suffix",
+  "settings": {
+    "count": 50,
+    "middle": "repnext-optimization/repnext_m5_relu_sparse_stage1_to_stage2_downsample_512_int8_dwpatched.tflite",
+    "openvino_config": {
+      "ENABLE_CPU_PINNING": "YES",
+      "INFERENCE_NUM_THREADS": "8",
+      "NUM_STREAMS": "1",
+      "PERFORMANCE_HINT": "LATENCY"
+    },
+    "stage01": "repnext-optimization/repnext_m5_relu_sparse_stage01_512.onnx",
+    "suffix": "repnext-optimization/repnext_m5_relu_sparse_suffix_from_stage2_downsample_512.onnx",
+    "warmup": 5
+  },
+  "total": {
+    "count": 50,
+    "max_ms": 4548.923477996141,
+    "mean_ms": 2210.749451199372,
+    "median_ms": 2111.459213505441,
+    "min_ms": 1377.6379439950688,
+    "p90_ms": 2688.244336997741,
+    "p95_ms": 3481.5180720033823
+  }
+}

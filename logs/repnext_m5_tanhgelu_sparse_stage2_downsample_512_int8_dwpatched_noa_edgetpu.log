@@ -1,6 +1,0 @@
-Edge TPU Compiler version 16.0.384591198
-Started a compilation timeout timer of 180 seconds.
-ERROR: Restored original execution plan after delegate application failure.
-Compilation failed: Internal error.
-Compilation child process completed within timeout period.
-Compilation failed! 

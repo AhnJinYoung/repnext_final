@@ -1,0 +1,14 @@
+{
+  "count": 30,
+  "latency": {
+    "max_ms": 8677.687874995172,
+    "mean_ms": 3972.223489666552,
+    "median_ms": 3463.6500629931106,
+    "min_ms": 2050.4893910110695,
+    "p90_ms": 5443.782700996962,
+    "p95_ms": 6991.919678999693
+  },
+  "model": "RepNeXt-M5 ReLU sparse PyTorch CPU baseline local",
+  "threads": 4,
+  "warmup": 5
+}

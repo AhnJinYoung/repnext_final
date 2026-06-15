@@ -1,0 +1,92 @@
+{
+  "activation": "tanh-gelu",
+  "sparse_equiv_downsample": false,
+  "limit": 40,
+  "eval_size": 512,
+  "results": [
+    {
+      "input_size": 96,
+      "latency_ms_avg": 179.21590617497714,
+      "native_eval": {
+        "mIoU": 0.06481394577475767,
+        "pixel_acc": 0.5327320865118416,
+        "classes_present": 71
+      },
+      "full_eval_512": {
+        "mIoU": 0.0648281460440913,
+        "pixel_acc": 0.533321195398526,
+        "classes_present": 71
+      }
+    },
+    {
+      "input_size": 128,
+      "latency_ms_avg": 222.77766149993568,
+      "native_eval": {
+        "mIoU": 0.10019663154400298,
+        "pixel_acc": 0.6256620346988083,
+        "classes_present": 69
+      },
+      "full_eval_512": {
+        "mIoU": 0.1001019886512754,
+        "pixel_acc": 0.6255309277998027,
+        "classes_present": 69
+      }
+    },
+    {
+      "input_size": 192,
+      "latency_ms_avg": 360.46932512495005,
+      "native_eval": {
+        "mIoU": 0.16359103773576628,
+        "pixel_acc": 0.7228197642430484,
+        "classes_present": 72
+      },
+      "full_eval_512": {
+        "mIoU": 0.16372615491619233,
+        "pixel_acc": 0.7227506569016127,
+        "classes_present": 72
+      }
+    },
+    {
+      "input_size": 256,
+      "latency_ms_avg": 563.3130294750117,
+      "native_eval": {
+        "mIoU": 0.21498374437205645,
+        "pixel_acc": 0.7889619609191509,
+        "classes_present": 72
+      },
+      "full_eval_512": {
+        "mIoU": 0.21476917019450856,
+        "pixel_acc": 0.7888489775926886,
+        "classes_present": 72
+      }
+    },
+    {
+      "input_size": 384,
+      "latency_ms_avg": 1948.648670825037,
+      "native_eval": {
+        "mIoU": 0.2338169926681572,
+        "pixel_acc": 0.8003990718851938,
+        "classes_present": 75
+      },
+      "full_eval_512": {
+        "mIoU": 0.23355431781984554,
+        "pixel_acc": 0.8003721089063379,
+        "classes_present": 75
+      }
+    },
+    {
+      "input_size": 512,
+      "latency_ms_avg": 2722.684336574889,
+      "native_eval": {
+        "mIoU": 0.22247907651049256,
+        "pixel_acc": 0.7890954759694534,
+        "classes_present": 80
+      },
+      "full_eval_512": {
+        "mIoU": 0.22247907651049256,
+        "pixel_acc": 0.7890954759694534,
+        "classes_present": 80
+      }
+    }
+  ]
+}

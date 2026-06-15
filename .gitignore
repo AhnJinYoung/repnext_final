@@ -13,3 +13,22 @@ saved_model*/
 __pycache__/
 *.pyc
 .DS_Store
+
+# local environments
+.venv*/
+venv/
+
+# generated build/runtime artifacts
+build/
+logs/
+runs/
+training/
+saved_model*/
+
+# large training caches
+teacher_cache/
+
+# generated demo scratch outputs
+demo/activation_maps*/
+demo/**/frames/
+demo/**/demo_results.json

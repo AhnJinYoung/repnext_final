@@ -1,0 +1,13 @@
+torch>=2.2
+torchvision>=0.17
+numpy<2
+pillow
+tqdm
+onnx
+onnxsim
+onnxruntime
+tensorflow==2.19.0
+onnx2tf
+ai-edge-litert
+flatbuffers
+protobuf

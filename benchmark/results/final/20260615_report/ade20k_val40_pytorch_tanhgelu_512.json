@@ -1,0 +1,27 @@
+{
+  "benchmark": "ADE20K validation semantic segmentation",
+  "metric": "mIoU over 150 classes; ADEChallenge labels 1..150 mapped to 0..149, 0 ignored",
+  "backend": "pytorch",
+  "backend_meta": {
+    "weights": "repnext_m5_ade20k.pth",
+    "activation": "tanh-gelu"
+  },
+  "size": 512,
+  "limit": 40,
+  "normalize": "zero-one",
+  "latency": {
+    "avg_ms": 8300.93689810019,
+    "min_ms": 3040.2506239988725,
+    "max_ms": 57135.93788300204,
+    "p50_ms": 5499.057001497931,
+    "p95_ms": 22449.965775998862,
+    "n": 40
+  },
+  "accuracy": {
+    "mIoU": 0.22247907651049256,
+    "mAcc": 0.3374924788516792,
+    "pixel_acc": 0.7890954759694534,
+    "classes_present": 80,
+    "valid_pixels": 9359088
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "benchmark": "ADE20K validation semantic segmentation",
+  "metric": "mIoU over 150 classes; ADEChallenge labels 1..150 mapped to 0..149, 0 ignored",
+  "backend": "tflite",
+  "backend_meta": {
+    "model": "build/20260615_shrink_w48/repnext_m5_tanhgelu_real_full_192_logits_full_integer_quant_dwpatched.tflite"
+  },
+  "size": 192,
+  "limit": 40,
+  "normalize": "zero-one",
+  "latency": {
+    "avg_ms": 46.614313700047205,
+    "min_ms": 35.80714900090243,
+    "max_ms": 93.03752400228404,
+    "p50_ms": 42.34384549999959,
+    "p95_ms": 70.59808899794007,
+    "n": 40
+  },
+  "accuracy": {
+    "mIoU": 0.00308705018000593,
+    "mAcc": 0.015384615384615385,
+    "pixel_acc": 0.20065826170038545,
+    "classes_present": 65,
+    "valid_pixels": 1317713
+  }
+}

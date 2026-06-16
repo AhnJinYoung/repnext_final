@@ -225,13 +225,13 @@ def render_paired_track_comparisons() -> None:
     )
     paired_track_plot(
         "coral_tpu_latency_accuracy.png",
-        "Raspberry Pi 5 ARM CPU w/ Coral TPU x2: TPU Baseline vs Optimized",
-        ["Partial\noffload", "Low-res\nTPU", "w48\nTPU"],
-        [4064.330, 184.880, 84.130],
-        [0.00338, 0.00861, 0.00309],
-        ["#d8893a", "#72b7b2", "#2f9e44"],
-        "All shown TPU-track variants are fast/compiler-useful but not accuracy-valid yet; QAT/distillation is required.",
-        acc_ylim=(0, 0.01),
+        "Raspberry Pi 5 ARM CPU w/ Coral TPU x2: Native Baseline vs TPU Candidates",
+        ["Native\nPyTorch 512", "Tanh-GELU\n192 target", "Full INT8\nTPU 96", "w48\nTPU 192"],
+        [3659.911, 360.469, 184.880, 84.130],
+        [0.2582, 0.1636, 0.00861, 0.00309],
+        ["#cc5c5c", "#2f9e44", "#72b7b2", "#8f7aa8"],
+        "Baseline is the unoptimized native model. 192px tanh-GELU meets the accuracy/latency target before full INT8; current TPU binaries still need QAT/distillation.",
+        acc_ylim=(0, 0.30),
     )
 
 
@@ -256,11 +256,11 @@ def render_track_latency() -> None:
         ),
         (
             "coral_tpu_latency.png",
-            "Raspberry Pi 5 ARM CPU w/ Coral TPU x2: Hybrid vs TPU-Compiler Optimized",
-            ["Hybrid TPU\nmiddle only", "Full RepNeXt 96\nall ops mapped", "w48 192\ncompiler-clean"],
-            [4064.330, 184.880, 84.130],
-            ["#d8893a", "#72b7b2", "#2f9e44"],
-            "Best TPU compiler result: 4064.3 -> 84.1 ms/frame (48.3x faster), but the w48 model still needs QAT/distillation.",
+            "Raspberry Pi 5 ARM CPU w/ Coral TPU x2: Native Baseline vs TPU-Ready Candidates",
+            ["Native PyTorch\n512", "Tanh-GELU\n192 target", "Full RepNeXt 96\nall ops mapped", "w48 192\ncompiler-clean"],
+            [3659.911, 360.469, 184.880, 84.130],
+            ["#cc5c5c", "#2f9e44", "#72b7b2", "#8f7aa8"],
+            "Best current TPU binary is 84.1 ms/frame. Best accuracy/latency target before INT8 is 192px tanh-GELU at 0.1636 mIoU.",
         ),
     ]
 
@@ -279,27 +279,28 @@ def render_track_latency() -> None:
 
 def render_accuracy_graph() -> None:
     labels = [
-        "LiteRT 96\nfloat32",
-        "Low-res TPU\nINT8",
+        "Native\n512",
+        "Tanh-GELU\n96",
+        "Tanh-GELU\n192",
         "LiteRT 256\ndyn-range",
-        "LiteRT 256\nfloat16",
-        "LiteRT 256\nINT8",
+        "Full INT8\nTPU 96",
+        "w48 INT8\nTPU 192",
     ]
-    miou = [0.0648, 0.0086, 0.2135, 0.2155, 0.0027]
-    colors = ["#8f7aa8", "#cc5c5c", "#2f9e44", "#72b7b2", "#d8893a"]
+    miou = [0.2582, 0.0627, 0.1636, 0.2135, 0.0086, 0.0031]
+    colors = ["#cc5c5c", "#72b7b2", "#2f9e44", "#4c78a8", "#d8893a", "#8f7aa8"]
 
     fig, ax = plt.subplots(figsize=(9.6, 5.0))
     bars = ax.bar(labels, miou, color=colors)
     ax.set_ylabel("ADE20K mIoU (higher is better)")
     ax.set_ylim(0, 0.30)
-    ax.set_title("Accuracy Ablation on the Same ADE20K val40 Protocol")
+    ax.set_title("Accuracy Ablation: Resolution Is Recoverable, Post-Training INT8 Is Not")
     ax.grid(axis="y", alpha=0.25)
     for bar, value in zip(bars, miou):
         ax.text(bar.get_x() + bar.get_width() / 2, value + 0.008, f"{value:.4f}", ha="center", fontsize=9)
     fig.text(
         0.5,
         0.02,
-        "Same ADE20K val40 protocol. Main accuracy losses: low resolution and full INT8 activations.",
+        "Native baseline uses the prior 5-image diagnostic supplied for the TPU track. 192px is the low-res target; full INT8 still needs QAT/distillation.",
         ha="center",
         fontsize=8.5,
     )
@@ -308,18 +309,37 @@ def render_accuracy_graph() -> None:
     fig.savefig(OUT / "accuracy_ablation_miou.png", dpi=160)
 
 
+def render_track_best_summary() -> None:
+    labels = ["Intel CPU\nnative baseline", "RPi5 CPU\nLiteRT 256", "TPU target\nTanh-GELU 192", "TPU binary\nw48 INT8 192"]
+    latency = [3659.911, 351.377, 360.469, 84.130]
+    miou = [0.2582, 0.2135, 0.1636, 0.0031]
+    colors = ["#cc5c5c", "#4c78a8", "#2f9e44", "#8f7aa8"]
+    paired_track_plot(
+        "best_methods_by_track_latency_accuracy.png",
+        "Best Method per Track: Accuracy-Valid Result vs Compiler-Clean TPU Binary",
+        labels,
+        latency,
+        miou,
+        colors,
+        "For TPU, the accuracy-valid candidate is 192px tanh-GELU before full INT8; the compiled w48 binary is faster but not accuracy-valid yet.",
+        acc_ylim=(0, 0.30),
+    )
+
+
 def main() -> None:
     render_pipeline_graph()
     render_latency_bars()
     render_track_latency()
     render_paired_track_comparisons()
     render_accuracy_graph()
+    render_track_best_summary()
     print(f"wrote {OUT / 'end_to_end_runtime_graphs.png'}")
     print(f"wrote {OUT / 'latency_comparison_logscale.png'}")
     print(f"wrote {OUT / 'intel_cpu_latency.png'}")
     print(f"wrote {OUT / 'rpi5_cpu_latency.png'}")
     print(f"wrote {OUT / 'coral_tpu_latency.png'}")
     print(f"wrote {OUT / 'accuracy_ablation_miou.png'}")
+    print(f"wrote {OUT / 'best_methods_by_track_latency_accuracy.png'}")
     print(f"wrote {OUT / 'intel_cpu_latency_accuracy.png'}")
     print(f"wrote {OUT / 'rpi5_cpu_latency_accuracy.png'}")
     print(f"wrote {OUT / 'coral_tpu_latency_accuracy.png'}")

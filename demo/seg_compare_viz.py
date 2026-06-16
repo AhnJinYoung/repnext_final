@@ -62,7 +62,10 @@ def load_variant(activation: str, sparse: bool) -> torch.nn.Module:
     else:
         act_cls = torch.nn.GELU
     model = export_onnx.RepNeXtSeg(act=act_cls).eval()
-    ckpt = torch.load(ROOT / "repnext_m5_ade20k.pth", map_location="cpu", weights_only=False)
+    ckpt_path = ROOT / "repnext_m5_ade20k.pth"
+    if not ckpt_path.exists():
+        ckpt_path = Path("/workspace/tvm/handoff/repnext_m5_ade20k.pth")
+    ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
     sd = ckpt.get("state_dict", ckpt)
     if sparse:
         sd, _ = export_onnx.rewrite_sparse_downsample_weights(sd)
@@ -140,10 +143,11 @@ def main() -> None:
 
     # (title, activation, sparse, input_size)
     variants = [
-        ("GELU @512 (orig)", "gelu", False, 512),
-        ("tanh-GELU @256 (fix)", "tanh-gelu", False, 256),
-        ("ReLU @512", "relu", True, 512),
-        ("tanh-GELU @96", "tanh-gelu", False, 96),
+        ("Intel native 512", "gelu", False, 512),
+        ("RPi5 LiteRT 256 proxy", "tanh-gelu", False, 256),
+        ("TPU target 192 proxy", "tanh-gelu", False, 192),
+        ("TPU low-res 96 proxy", "tanh-gelu", False, 96),
+        ("Invalid ReLU 512", "relu", True, 512),
     ]
 
     tflite = None
@@ -198,7 +202,7 @@ def main() -> None:
     for c, title in enumerate(col_titles):
         axes[0, c].set_title(title, fontsize=9)
 
-    fig.suptitle("RepNeXt-M5 ADE20K segmentation: variant comparison (overlay)", fontsize=12)
+    fig.suptitle("RepNeXt-M5 ADE20K segmentation: best track candidates and rejected variants", fontsize=12)
     fig.tight_layout(rect=(0, 0, 1, 0.98))
     args.out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(args.out, dpi=130)

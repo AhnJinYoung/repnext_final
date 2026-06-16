@@ -43,12 +43,12 @@ def arrow(ax, x0, y0, x1, y1):
 
 def render_pipeline_graph() -> None:
     fig, axes = plt.subplots(3, 1, figsize=(13, 8.8))
-    fig.suptitle("Scene Understanding Optimization via DL Compiler: End-to-End Runtime Graphs", fontsize=15, y=0.98)
+    fig.suptitle("Scene Understanding Optimization via DL Compiler: Best Accuracy-Valid Runtime Graphs", fontsize=15, y=0.98)
 
-    # 1. Old hybrid pipeline.
+    # 1. Intel CPU compiler baseline.
     ax = axes[0]
     ax.set_title(
-        "A. RPi5 ARM CPU w/ Google Coral TPU x2: old hybrid path accelerates only the middle segment",
+        "A. Intel CPU: native RepNeXt vs accuracy-valid compiler baseline",
         fontsize=11,
         loc="left",
     )
@@ -57,25 +57,24 @@ def render_pipeline_graph() -> None:
     ax.axis("off")
     y = 0.75
     box(ax, (0.2, y), (1.2, 0.5), "RGB\n512", "#e8f1ff")
-    box(ax, (1.8, y), (2.7, 0.5), "RPi5 ARM CPU\nprefix stage0/1\n1706 ms", "#ffd9d9")
-    box(ax, (4.9, y), (1.25, 0.5), "quant\n7 ms", "#fff0bf")
-    box(ax, (6.5, y), (1.9, 0.5), "Coral TPU\nmiddle\n29 ms", "#d7f7d7")
-    box(ax, (8.8, y), (1.25, 0.5), "dequant\n1 ms", "#fff0bf")
-    box(ax, (10.4, y), (2.7, 0.5), "RPi5 ARM CPU\nsuffix FPN/head\n2321 ms", "#ffd9d9")
-    box(ax, (13.3, y), (0.5, 0.5), "seg", "#e8f1ff")
-    for x0, x1 in [(1.4, 1.8), (4.5, 4.9), (6.15, 6.5), (8.4, 8.8), (10.05, 10.4), (13.1, 13.3)]:
+    box(ax, (1.9, y), (3.2, 0.5), "Native PyTorch\nfull RepNeXt\n3972 ms", "#ffd9d9")
+    box(ax, (5.8, y), (3.2, 0.5), "torch.compile\nfull graph\n2608 ms", "#dceeff")
+    box(ax, (9.8, y), (2.2, 0.5), "512x512x150\nlogits", "#e8f1ff")
+    box(ax, (12.5, y), (1.0, 0.5), "seg", "#e8f1ff")
+    for x0, x1 in [(1.4, 1.9), (5.1, 5.8), (9.0, 9.8), (12.0, 12.5)]:
         arrow(ax, x0, 1.0, x1, 1.0)
     ax.text(
         0.2,
         0.25,
-        "Total: 4064 ms/frame. Lesson: partial offload is not enough; the DL compiler must expose a full accelerator graph.",
+        "Result: 3972 -> 2608 ms/frame on Intel CPU with native-level accuracy (0.2225 mIoU).",
         fontsize=10,
+        fontweight="bold",
     )
 
-    # 2. Accuracy-recovered CPU low-res path.
+    # 2. Accuracy-recovered RPi5 CPU low-res path.
     ax = axes[1]
     ax.set_title(
-        "B. RPi5 ARM CPU w/o Google Coral TPU x2: full-graph compiled LiteRT path gives the best accuracy-valid demo",
+        "B. Raspberry Pi 5 ARM CPU w/o Coral TPU x2: best live-demo path",
         fontsize=11,
         loc="left",
     )
@@ -99,7 +98,7 @@ def render_pipeline_graph() -> None:
     # 3. Compiler-centric TPU candidate.
     ax = axes[2]
     ax.set_title(
-        "C. RPi5 ARM CPU w/ Google Coral TPU x2: DL-compiler-friendly full graph maps completely to Coral TPU",
+        "C. Raspberry Pi 5 ARM CPU w/ Coral TPU x2: best accuracy-valid TPU-track target",
         fontsize=11,
         loc="left",
     )
@@ -107,16 +106,15 @@ def render_pipeline_graph() -> None:
     ax.set_ylim(0, 2)
     ax.axis("off")
     box(ax, (0.2, y), (1.3, 0.5), "RGB\n192", "#e8f1ff")
-    box(ax, (2.0, y), (1.3, 0.5), "int8\ninput", "#fff0bf")
-    box(ax, (3.8, y), (4.6, 0.5), "w48 full CNN graph\n960/960 ops on Coral TPU\n1 subgraph", "#d7f7d7")
-    box(ax, (8.9, y), (2.0, 0.5), "48x48x150\nint8 logits", "#e8f1ff")
-    box(ax, (11.4, y), (2.0, 0.5), "dequant /\nstitch", "#f1f1f1")
-    for x0, x1 in [(1.5, 2.0), (3.3, 3.8), (8.4, 8.9), (10.9, 11.4)]:
+    box(ax, (2.0, y), (5.0, 0.5), "Full RepNeXt tanh-GELU\n192 target graph\npre-INT8 accuracy-valid", "#d7f7d7")
+    box(ax, (7.7, y), (2.0, 0.5), "48x48x150\nlogits", "#e8f1ff")
+    box(ax, (10.3, y), (2.4, 0.5), "upsample /\nvisual overlay", "#f1f1f1")
+    for x0, x1 in [(1.5, 2.0), (7.0, 7.7), (9.7, 10.3)]:
         arrow(ax, x0, 1.0, x1, 1.0)
     ax.text(
         0.2,
         0.25,
-        "Compiler result: 84 ms/frame, 960/960 TPU ops, 57.75 KiB streaming. Accuracy needs distillation/QAT.",
+        "Result: 360 ms/frame with 0.1636 mIoU. Direct EdgeTPU compile fails at 192 due to large activation tensors.",
         fontsize=10,
         fontweight="bold",
     )

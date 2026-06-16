@@ -63,6 +63,73 @@ Generated figures are written to:
 demo/runtime_graphs/
 ```
 
+## Video Segmentation Demo
+
+Install video I/O helpers once if your Python does not already have them:
+
+```bash
+python3 -m pip install -r demo/video_requirements.txt
+```
+
+Run the slow native baseline:
+
+```bash
+python3 demo/video_segmentation_demo.py run \
+  --input-video input.mp4 \
+  --output-video demo/video_runs/native512_overlay.mp4 \
+  --output-frames demo/video_runs/native512_frames \
+  --metrics demo/video_runs/native512_metrics.json \
+  --name "Native 512" \
+  --backend pytorch \
+  --weights /workspace/tvm/handoff/repnext_m5_ade20k.pth \
+  --activation gelu \
+  --size 512 \
+  --max-frames 30
+```
+
+For LiteRT environments without video I/O libraries, first extract frames with
+system Python:
+
+```bash
+python3 demo/video_segmentation_demo.py extract \
+  --input-video input.mp4 \
+  --output-frames demo/video_runs/extracted_frames \
+  --max-frames 120
+```
+
+Run the optimized LiteRT binary candidate on those frames:
+
+```bash
+/workspace/tvm/local-convert-env/bin/python3 demo/video_segmentation_demo.py run \
+  --input-frames demo/video_runs/extracted_frames \
+  --output-frames demo/video_runs/litert192_frames \
+  --metrics demo/video_runs/litert192_metrics.json \
+  --name "TPU target 192 LiteRT" \
+  --backend tflite \
+  --model artifacts/full_repnext_192_target/onnx2tf_tanhgelu_192_logits/repnext_m5_tanhgelu_real_full_192_logits_dynamic_range_quant.tflite \
+  --size 192 \
+  --fps 30
+```
+
+Encode the optimized overlay frames afterward:
+
+```bash
+python3 demo/video_segmentation_demo.py encode \
+  --input-frames demo/video_runs/litert192_frames \
+  --output-video demo/video_runs/litert192_overlay.mp4 \
+  --fps 3
+```
+
+The module writes per-frame latency and FPS to the `--metrics` JSON file. Use
+those JSONs to compare choppy native inference against the optimized model.
+
+```bash
+python3 demo/video_segmentation_demo.py summarize \
+  demo/video_runs/native512_metrics.json \
+  demo/video_runs/litert192_metrics.json \
+  --out demo/video_runs/video_demo_comparison.md
+```
+
 ## Accuracy Benchmark
 
 ```bash

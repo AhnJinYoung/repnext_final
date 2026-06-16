@@ -143,11 +143,9 @@ def main() -> None:
 
     # (title, activation, sparse, input_size)
     variants = [
-        ("Intel native 512", "gelu", False, 512),
-        ("RPi5 LiteRT 256 proxy", "tanh-gelu", False, 256),
-        ("TPU target 192 proxy", "tanh-gelu", False, 192),
-        ("TPU low-res 96 proxy", "tanh-gelu", False, 96),
-        ("Invalid ReLU 512", "relu", True, 512),
+        ("Native 512", "gelu", False, 512),
+        ("RPi5 LiteRT 256", "tanh-gelu", False, 256),
+        ("TPU target 192", "tanh-gelu", False, 192),
     ]
 
     tflite = None
@@ -202,7 +200,7 @@ def main() -> None:
     for c, title in enumerate(col_titles):
         axes[0, c].set_title(title, fontsize=9)
 
-    fig.suptitle("RepNeXt-M5 ADE20K segmentation: best track candidates and rejected variants", fontsize=12)
+    fig.suptitle("RepNeXt-M5 ADE20K segmentation: accuracy-valid live-demo candidates", fontsize=12)
     fig.tight_layout(rect=(0, 0, 1, 0.98))
     args.out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(args.out, dpi=130)

@@ -129,13 +129,11 @@ def render_pipeline_graph() -> None:
 def render_latency_bars() -> None:
     labels = [
         "RPi5 ARM CPU\nnative PyTorch 512",
-        "RPi5 ARM CPU +\nCoral TPU x2 hybrid",
         "RPi5 ARM CPU\nLiteRT 256\naccuracy-valid",
-        "Intel CPU\ncompiled pipeline",
-        "RPi5 ARM CPU +\nCoral TPU x2\nw48 compiler-clean",
+        "TPU target\nTanh-GELU 192",
     ]
-    values = [4222.626, 4064.330, 351.377, 2210.749, 84.130]
-    colors = ["#cc5c5c", "#d8893a", "#4c78a8", "#8f7aa8", "#2f9e44"]
+    values = [4222.626, 351.377, 360.469]
+    colors = ["#cc5c5c", "#4c78a8", "#2f9e44"]
 
     fig, ax = plt.subplots(figsize=(10.5, 5.2))
     bars = ax.bar(labels, values, color=colors)
@@ -148,8 +146,7 @@ def render_latency_bars() -> None:
     fig.text(
         0.5,
         0.02,
-        "Best accuracy-valid demo: RPi5 ARM CPU LiteRT 256 = 12.0x faster than native. "
-        "Best TPU compiler result: full graph mapped to Coral TPU = 84 ms/frame.",
+        "Only methods with mIoU >= 0.15 are shown. Best live demo: RPi5 ARM CPU LiteRT 256 = 12.0x faster than native.",
         ha="center",
         fontsize=8.5,
     )
@@ -205,18 +202,18 @@ def paired_track_plot(filename, title, labels, latency, accuracy, colors, note, 
 def render_paired_track_comparisons() -> None:
     paired_track_plot(
         "intel_cpu_latency_accuracy.png",
-        "Intel CPU Track: Native vs Compiler Optimized",
-        ["Native", "torch.compile", "OpenVINO+\nLiteRT"],
-        [3972.223, 2608.011, 2210.749],
-        [0.22245, 0.22245, 0.00338],
-        ["#cc5c5c", "#6c8ebf", "#2f9e44"],
-        "Accuracy is ADE20K val40. OpenVINO+LiteRT used the ReLU/sparse model family, which is fast but not accuracy-valid.",
+        "Intel CPU Track: Accuracy-Valid Native vs Compiler Baseline",
+        ["Native 512", "torch.compile\n512"],
+        [3972.223, 2608.011],
+        [0.22245, 0.22245],
+        ["#cc5c5c", "#6c8ebf"],
+        "Only methods with mIoU >= 0.15 are shown. OpenVINO+LiteRT/ReLU is omitted because its measured mIoU is below 0.15.",
         acc_ylim=(0, 0.26),
     )
     paired_track_plot(
         "rpi5_cpu_latency_accuracy.png",
         "Raspberry Pi 5 ARM CPU w/o Coral TPU x2: Native vs Optimized",
-        ["Native", "LiteRT 256"],
+        ["Native 512", "RPi5 LiteRT\n256"],
         [4222.626, 351.377],
         [0.22245, 0.21347],
         ["#cc5c5c", "#2f9e44"],
@@ -225,12 +222,12 @@ def render_paired_track_comparisons() -> None:
     )
     paired_track_plot(
         "coral_tpu_latency_accuracy.png",
-        "Raspberry Pi 5 ARM CPU w/ Coral TPU x2: Native Baseline vs TPU Candidates",
-        ["Native\nPyTorch 512", "Tanh-GELU\n192 target", "Full INT8\nTPU 96", "w48\nTPU 192"],
-        [3659.911, 360.469, 184.880, 84.130],
-        [0.2582, 0.1636, 0.00861, 0.00309],
-        ["#cc5c5c", "#2f9e44", "#72b7b2", "#8f7aa8"],
-        "Baseline is the unoptimized native model. 192px tanh-GELU meets the accuracy/latency target before full INT8; current TPU binaries still need QAT/distillation.",
+        "Raspberry Pi 5 ARM CPU w/ Coral TPU x2: Accuracy-Valid TPU-Track Target",
+        ["Native 512", "TPU target\n192"],
+        [3659.911, 360.469],
+        [0.2582, 0.1636],
+        ["#cc5c5c", "#2f9e44"],
+        "Only methods with mIoU >= 0.15 are shown. Current full-INT8 TPU binaries are omitted because their mIoU is below 0.15.",
         acc_ylim=(0, 0.30),
     )
 
@@ -240,27 +237,27 @@ def render_track_latency() -> None:
     tracks = [
         (
             "intel_cpu_latency.png",
-            "Intel CPU: Native vs DL-Compiler Optimized",
-            ["Intel PyTorch\nbaseline", "Intel torch.compile", "Intel OpenVINO+LiteRT\npersistent"],
-            [3972.223, 2608.011, 2210.749],
-            ["#cc5c5c", "#6c8ebf", "#2f9e44"],
-            "Best Intel result: 3972.2 -> 2210.7 ms/frame (1.80x faster) on the same i5 CPU.",
+            "Intel CPU: Accuracy-Valid Native vs Compiler Baseline",
+            ["Native 512", "torch.compile\n512"],
+            [3972.223, 2608.011],
+            ["#cc5c5c", "#6c8ebf"],
+            "Only methods with mIoU >= 0.15 are shown.",
         ),
         (
             "rpi5_cpu_latency.png",
             "Raspberry Pi 5 ARM CPU w/o Coral TPU x2: Native vs Optimized",
-            ["RPi5 PyTorch\n512 native", "RPi5 TFLite\nmiddle hybrid", "RPi5 LiteRT\n256 dyn-range"],
-            [4222.626, 3652.424, 351.377],
-            ["#cc5c5c", "#d8893a", "#2f9e44"],
+            ["Native 512", "RPi5 LiteRT\n256"],
+            [4222.626, 351.377],
+            ["#cc5c5c", "#4c78a8"],
             "Best accuracy-valid edge demo: 4222.6 -> 351.4 ms/frame (12.0x faster) on the same RPi5 ARM CPU.",
         ),
         (
             "coral_tpu_latency.png",
-            "Raspberry Pi 5 ARM CPU w/ Coral TPU x2: Native Baseline vs TPU-Ready Candidates",
-            ["Native PyTorch\n512", "Tanh-GELU\n192 target", "Full RepNeXt 96\nall ops mapped", "w48 192\ncompiler-clean"],
-            [3659.911, 360.469, 184.880, 84.130],
-            ["#cc5c5c", "#2f9e44", "#72b7b2", "#8f7aa8"],
-            "Best current TPU binary is 84.1 ms/frame. Best accuracy/latency target before INT8 is 192px tanh-GELU at 0.1636 mIoU.",
+            "Raspberry Pi 5 ARM CPU w/ Coral TPU x2: Accuracy-Valid TPU-Track Target",
+            ["Native 512", "TPU target\n192"],
+            [3659.911, 360.469],
+            ["#cc5c5c", "#2f9e44"],
+            "Current full-INT8 TPU binaries are omitted here because their mIoU is below 0.15.",
         ),
     ]
 
@@ -280,27 +277,24 @@ def render_track_latency() -> None:
 def render_accuracy_graph() -> None:
     labels = [
         "Native\n512",
-        "Tanh-GELU\n96",
-        "Tanh-GELU\n192",
+        "TPU target\n192",
         "LiteRT 256\ndyn-range",
-        "Full INT8\nTPU 96",
-        "w48 INT8\nTPU 192",
     ]
-    miou = [0.2582, 0.0627, 0.1636, 0.2135, 0.0086, 0.0031]
-    colors = ["#cc5c5c", "#72b7b2", "#2f9e44", "#4c78a8", "#d8893a", "#8f7aa8"]
+    miou = [0.2582, 0.1636, 0.2135]
+    colors = ["#cc5c5c", "#2f9e44", "#4c78a8"]
 
     fig, ax = plt.subplots(figsize=(9.6, 5.0))
     bars = ax.bar(labels, miou, color=colors)
     ax.set_ylabel("ADE20K mIoU (higher is better)")
     ax.set_ylim(0, 0.30)
-    ax.set_title("Accuracy Ablation: Resolution Is Recoverable, Post-Training INT8 Is Not")
+    ax.set_title("Accuracy-Valid Candidates (mIoU >= 0.15)")
     ax.grid(axis="y", alpha=0.25)
     for bar, value in zip(bars, miou):
         ax.text(bar.get_x() + bar.get_width() / 2, value + 0.008, f"{value:.4f}", ha="center", fontsize=9)
     fig.text(
         0.5,
         0.02,
-        "Native baseline uses the prior 5-image diagnostic supplied for the TPU track. 192px is the low-res target; full INT8 still needs QAT/distillation.",
+        "Methods below 0.15 mIoU are intentionally omitted from this demo graph.",
         ha="center",
         fontsize=8.5,
     )
@@ -310,18 +304,18 @@ def render_accuracy_graph() -> None:
 
 
 def render_track_best_summary() -> None:
-    labels = ["Intel CPU\nnative baseline", "RPi5 CPU\nLiteRT 256", "TPU target\nTanh-GELU 192", "TPU binary\nw48 INT8 192"]
-    latency = [3659.911, 351.377, 360.469, 84.130]
-    miou = [0.2582, 0.2135, 0.1636, 0.0031]
-    colors = ["#cc5c5c", "#4c78a8", "#2f9e44", "#8f7aa8"]
+    labels = ["Native 512", "RPi5 LiteRT\n256", "TPU target\n192"]
+    latency = [3659.911, 351.377, 360.469]
+    miou = [0.2582, 0.2135, 0.1636]
+    colors = ["#cc5c5c", "#4c78a8", "#2f9e44"]
     paired_track_plot(
         "best_methods_by_track_latency_accuracy.png",
-        "Best Method per Track: Accuracy-Valid Result vs Compiler-Clean TPU Binary",
+        "Best Accuracy-Valid Methods for Live Demo",
         labels,
         latency,
         miou,
         colors,
-        "For TPU, the accuracy-valid candidate is 192px tanh-GELU before full INT8; the compiled w48 binary is faster but not accuracy-valid yet.",
+        "Only methods with mIoU >= 0.15 are shown. RPi5 LiteRT 256 is the most reliable live-demo choice.",
         acc_ylim=(0, 0.30),
     )
 

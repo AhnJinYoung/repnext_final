@@ -102,23 +102,25 @@ demo/runtime_graphs/best_methods_by_track_latency_accuracy.png
 demo/seg_compare/best_track_methods_comparison.png
 ```
 
-The qualitative comparison includes:
+The qualitative comparison now uses the same names as the runtime graphs and
+includes only accuracy-valid live-demo candidates:
 
-- Intel/native 512 proxy
-- RPi5 LiteRT 256 proxy
-- TPU target 192 proxy
-- TPU low-res 96 proxy
-- invalid ReLU 512
+- Native 512
+- RPi5 LiteRT 256
+- TPU target 192
 
 The demo-sample mean from the regenerated overlay figure was:
 
 | Variant | Demo mIoU | Demo pixel acc |
 |---|---:|---:|
-| Intel native 512 | 0.3295 | 0.8127 |
-| RPi5 LiteRT 256 proxy | 0.3657 | 0.8051 |
-| TPU target 192 proxy | 0.3172 | 0.7445 |
-| TPU low-res 96 proxy | 0.2413 | 0.7360 |
-| Invalid ReLU 512 | 0.0097 | 0.0493 |
+| Native 512 | 0.3295 | 0.8127 |
+| RPi5 LiteRT 256 | 0.3657 | 0.8051 |
+| TPU target 192 | 0.3172 | 0.7445 |
 
 These demo-image values are for visualization only; the benchmark tables above
 remain the quantitative basis for model selection.
+
+Runtime graphs were also regenerated with all methods below `0.15` mIoU removed.
+This removes the current full-INT8 TPU binaries from the advisor-facing demo
+graphs. They remain important compiler artifacts, but they should not be shown
+as live segmentation demo candidates until QAT/distillation recovers accuracy.

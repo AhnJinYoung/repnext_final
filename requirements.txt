@@ -1,9 +1,51 @@
 # Reproduction environment for this repository.
 #
-# Verified locally on Python 3.12.3 across:
+# Verified locally on Ubuntu 24.04.4 LTS / Python 3.12.3 across:
 # - system Python: PyTorch / ONNX export / plotting
 # - /workspace/tvm/local-convert-env: TensorFlow / onnx2tf / LiteRT conversion
 # - .venv-video: imageio video IO
+#
+# Non-pip system dependencies used by the shell/video/conversion pipelines.
+# Install them with your OS package manager before installing Python packages.
+# Locally verified package / binary versions:
+# - Ubuntu: 24.04.4 LTS
+# - python3: 3.12.3-0ubuntu2.1
+# - python3-venv: 3.12.3-0ubuntu2.1
+# - python3-pip: 24.0+dfsg-1ubuntu1.3
+# - bash: 5.2.21-2ubuntu4
+# - coreutils: 9.4-3ubuntu6.1
+#   Provides mkdir, cp, rm, tail, sort used by the batch scripts.
+# - findutils: 4.9.0-5build1
+#   Provides find used by scripts/export_compile_edgetpu.sh and run_all.sh.
+# - git: 1:2.43.0-1ubuntu7.3
+# - openssh-client: 1:9.6p1-3ubuntu13.16
+#   Provides ssh and scp for Raspberry Pi batch demo scripts.
+# - sshpass: 1.09-1
+#   Used by demo/run_fourtrack_video_batch.sh and demo/run_rpi_only_video_batch.sh.
+# - edgetpu-compiler apt package: 16.0
+# - edgetpu_compiler binary: 16.0.384591198
+#   Used by scripts/export_compile_edgetpu.sh and qat_tpu_pipeline/export_compile.sh.
+# - flatbuffers-compiler: 2.0.8+dfsg1-6build1
+# - flatc binary: 2.0.8
+#
+# Non-pip hardware / runtime dependencies for the Raspberry Pi path:
+# - Raspberry Pi 5 ARM host reachable by SSH for demo/run_*_video_batch.sh.
+# - Google Coral USB Edge TPU for --delegate edgetpu runs.
+# - RPi Python environment should provide pycoral and/or tflite-runtime.
+#   Local SSH was unavailable while writing this file, so the aarch64 pins at
+#   the bottom are best-effort compatibility pins rather than locally verified.
+#
+# Non-pip data / model artifacts required to reproduce all results:
+# - ADE20K dataset root, passed as ADE_ROOT or --ade-root.
+# - RepNeXt-M5 ADE20K checkpoint, e.g.
+#   /workspace/tvm/handoff/repnext_m5_ade20k.pth
+# - Generated TFLite / EdgeTPU artifacts under artifacts/ when replaying demo
+#   videos without rebuilding conversion outputs.
+#
+# Video encoding note:
+# - The checked local environment did not have system ffmpeg/ffprobe in PATH.
+#   Video scripts use imageio + imageio-ffmpeg below, which supplies ffmpeg for
+#   Python video IO.
 #
 # Install with:
 #   python3.12 -m venv .venv

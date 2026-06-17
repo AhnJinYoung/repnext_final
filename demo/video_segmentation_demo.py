@@ -236,6 +236,18 @@ class PytorchBackend:
 
 class TfliteBackend:
     def __init__(self, model_path: Path, threads: int, delegate: str):
+        if delegate == "edgetpu":
+            try:
+                from pycoral.utils.edgetpu import make_interpreter
+
+                self.interp = make_interpreter(str(model_path))
+                self.interp.allocate_tensors()
+                self.input_info = self.interp.get_input_details()[0]
+                self.output_info = self.interp.get_output_details()[0]
+                return
+            except Exception:
+                pass
+
         Interpreter = None
         load_delegate = None
         try:

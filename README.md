@@ -14,9 +14,9 @@ The main write-up is [report.tex](report.tex).
 |---|---:|---:|---:|---|
 | Intel CPU | OpenVINO+LiteRT | `2210.749 ms` | `0.0034 mIoU` for ReLU/sparse family | fastest Intel compiler pipeline, not accuracy-valid |
 | RPi5 ARM CPU | LiteRT 256 | `351.377 ms` | `0.2135 mIoU` | best no-training accuracy-valid demo |
-| RPi5 + Coral TPU x2 | w48 TPU | `84.130 ms` | `0.0031 mIoU` | compiler-clean TPU graph, needs QAT/distillation |
+| RPi5 + Coral TPU x2 | TPU target 192 | `360.469 ms` | `0.1636 mIoU` | accuracy-valid TPU-track target; INT8 EdgeTPU compile still needs QAT/distillation |
 
-The key conclusion is that the **RPi5 CPU LiteRT 256** model is the best current demo, while the **w48 TPU** model proves the full graph can map to Coral TPU but still needs training for accuracy.
+The key conclusion is that the **RPi5 CPU LiteRT 256** model is the best current live-demo path. The **TPU target 192** model is the useful TPU-track accuracy target: it keeps mIoU above 0.15 at about 360 ms/frame, but preserving that accuracy after full INT8 EdgeTPU compilation still needs QAT/distillation.
 
 ## Repo Layout
 
@@ -25,6 +25,10 @@ report.tex                         final report
 demo/runtime_graphs/               report graphs
 demo/seg_compare/                  demo segmentation visualizations
 demo/runtime_graph_viz.py          regenerates latency/accuracy graphs
+demo/video_segmentation_demo.py    image/video segmentation benchmark runner
+demo/make_realtime_synced_video.py source-time-synced comparison video builder
+demo/make_source_native_rpi5_realtime_video.py
+                                    source/native/RPi5 three-panel demo video
 benchmark/ade20k_accuracy_benchmark.py
 benchmark/results/                 selected final benchmark JSONs
 conversion/                        export, calibration, and TFLite patch helpers
@@ -128,6 +132,29 @@ python3 demo/video_segmentation_demo.py summarize \
   demo/video_runs/native512_metrics.json \
   demo/video_runs/litert192_metrics.json \
   --out demo/video_runs/video_demo_comparison.md
+```
+
+For presentation videos, use the realtime-sync builders. They keep the original
+source-video timeline fixed. If a model is slower than the source FPS, the
+panel holds the latest completed segmentation frame, so the native baseline
+looks choppy while the optimized path updates more often.
+
+Native baseline vs RPi5 CPU only:
+
+```bash
+python3 demo/make_native_vs_rpi5_realtime_video.py \
+  --root demo/video_runs_rpi_only/city_follow_walk_10s \
+  --output demo/video_runs_rpi_only/city_follow_walk_10s/city_follow_walk_10s_native_vs_rpi5_realtime_sync_24fps.mp4 \
+  --fps 24
+```
+
+Source video + native baseline + RPi5 CPU:
+
+```bash
+python3 demo/make_source_native_rpi5_realtime_video.py \
+  --root demo/video_runs_rpi_only/city_follow_walk_10s \
+  --output demo/video_runs_rpi_only/source_native_rpi5_3panel/city_follow_walk_source_native_rpi5_24fps.mp4 \
+  --fps 24
 ```
 
 ## Accuracy Benchmark

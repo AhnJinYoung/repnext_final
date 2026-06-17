@@ -1,0 +1,58 @@
+{
+  "name": "Native PyTorch 512 realtime sparse",
+  "backend": "pytorch",
+  "model": null,
+  "weights": "/workspace/tvm/handoff/repnext_m5_ade20k.pth",
+  "input_video": null,
+  "input_frames": "demo/video_runs_rpi_only/street_crossing_crowd_10s/native_realtime_sparse_input_frames",
+  "output_video": null,
+  "output_frames": "demo/video_runs_rpi_only/street_crossing_crowd_10s/native_realtime_sparse_frames",
+  "size": 512,
+  "normalize": "zero-one",
+  "frames": 5,
+  "input_fps": 24.0,
+  "output_fps": 1.0,
+  "wall_time_s": 12.482332192004833,
+  "wall_fps": 0.40056617009460727,
+  "inference": {
+    "avg_ms": 2076.326041201537,
+    "min_ms": 1616.0584180033766,
+    "max_ms": 2735.3203570019105,
+    "p50_ms": 1931.693805003306,
+    "p95_ms": 2735.3203570019105,
+    "fps": 0.48161992873783727,
+    "n": 5
+  },
+  "per_frame": [
+    {
+      "output_index": 0,
+      "source_index": 0,
+      "infer_ms": 2425.9706720040413,
+      "fps": 0.41220613733715167
+    },
+    {
+      "output_index": 1,
+      "source_index": 1,
+      "infer_ms": 1616.0584180033766,
+      "fps": 0.6187895120991292
+    },
+    {
+      "output_index": 2,
+      "source_index": 2,
+      "infer_ms": 1931.693805003306,
+      "fps": 0.517680388791374
+    },
+    {
+      "output_index": 3,
+      "source_index": 3,
+      "infer_ms": 1672.5869539950509,
+      "fps": 0.5978762405215788
+    },
+    {
+      "output_index": 4,
+      "source_index": 4,
+      "infer_ms": 2735.3203570019105,
+      "fps": 0.36558789080781207
+    }
+  ]
+}

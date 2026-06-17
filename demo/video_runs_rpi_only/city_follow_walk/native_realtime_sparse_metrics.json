@@ -1,0 +1,46 @@
+{
+  "name": "Native PyTorch 512 realtime sparse",
+  "backend": "pytorch",
+  "model": null,
+  "weights": "/workspace/tvm/handoff/repnext_m5_ade20k.pth",
+  "input_video": null,
+  "input_frames": "demo/video_runs_rpi_only/city_follow_walk/native_realtime_sparse_input_frames",
+  "output_video": null,
+  "output_frames": "demo/video_runs_rpi_only/city_follow_walk/native_realtime_sparse_frames",
+  "size": 512,
+  "normalize": "zero-one",
+  "frames": 3,
+  "input_fps": 24.0,
+  "output_fps": 1.0,
+  "wall_time_s": 5.96556227599649,
+  "wall_fps": 0.502886377042955,
+  "inference": {
+    "avg_ms": 1836.2130560005123,
+    "min_ms": 1492.8211099977489,
+    "max_ms": 2325.9069030027604,
+    "p50_ms": 1689.9111550010275,
+    "p95_ms": 2325.9069030027604,
+    "fps": 0.5445991121412226,
+    "n": 3
+  },
+  "per_frame": [
+    {
+      "output_index": 0,
+      "source_index": 0,
+      "infer_ms": 2325.9069030027604,
+      "fps": 0.42993982205779335
+    },
+    {
+      "output_index": 1,
+      "source_index": 1,
+      "infer_ms": 1492.8211099977489,
+      "fps": 0.6698726279410049
+    },
+    {
+      "output_index": 2,
+      "source_index": 2,
+      "infer_ms": 1689.9111550010275,
+      "fps": 0.5917470850705119
+    }
+  ]
+}

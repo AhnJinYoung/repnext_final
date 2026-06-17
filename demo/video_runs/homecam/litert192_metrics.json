@@ -1,0 +1,58 @@
+{
+  "name": "LiteRT 192 dynamic-range",
+  "backend": "tflite",
+  "model": "artifacts/full_repnext_192_target/onnx2tf_tanhgelu_192_logits/repnext_m5_tanhgelu_real_full_192_logits_dynamic_range_quant.tflite",
+  "weights": null,
+  "input_video": null,
+  "input_frames": "demo/video_runs/homecam/input_frames",
+  "output_video": null,
+  "output_frames": "demo/video_runs/homecam/litert192_frames",
+  "size": 192,
+  "normalize": "zero-one",
+  "frames": 5,
+  "input_fps": 6.0,
+  "output_fps": 3.4673461992396066,
+  "wall_time_s": 2.655771874000493,
+  "wall_fps": 1.8826918264136538,
+  "inference": {
+    "avg_ms": 288.40500559745124,
+    "min_ms": 205.95848599623423,
+    "max_ms": 411.8593549937941,
+    "p50_ms": 283.96275299746776,
+    "p95_ms": 411.8593549937941,
+    "fps": 3.4673461992396066,
+    "n": 5
+  },
+  "per_frame": [
+    {
+      "output_index": 0,
+      "source_index": 0,
+      "infer_ms": 205.95848599623423,
+      "fps": 4.85534740247743
+    },
+    {
+      "output_index": 1,
+      "source_index": 1,
+      "infer_ms": 209.24816300248494,
+      "fps": 4.779014475688011
+    },
+    {
+      "output_index": 2,
+      "source_index": 2,
+      "infer_ms": 330.99627099727513,
+      "fps": 3.021182072496014
+    },
+    {
+      "output_index": 3,
+      "source_index": 3,
+      "infer_ms": 411.8593549937941,
+      "fps": 2.4280133202633407
+    },
+    {
+      "output_index": 4,
+      "source_index": 4,
+      "infer_ms": 283.96275299746776,
+      "fps": 3.5215886219025263
+    }
+  ]
+}

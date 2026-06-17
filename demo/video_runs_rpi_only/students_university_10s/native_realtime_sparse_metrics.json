@@ -1,0 +1,58 @@
+{
+  "name": "Native PyTorch 512 realtime sparse",
+  "backend": "pytorch",
+  "model": null,
+  "weights": "/workspace/tvm/handoff/repnext_m5_ade20k.pth",
+  "input_video": null,
+  "input_frames": "demo/video_runs_rpi_only/students_university_10s/native_realtime_sparse_input_frames",
+  "output_video": null,
+  "output_frames": "demo/video_runs_rpi_only/students_university_10s/native_realtime_sparse_frames",
+  "size": 512,
+  "normalize": "zero-one",
+  "frames": 5,
+  "input_fps": 24.0,
+  "output_fps": 1.0,
+  "wall_time_s": 10.656171766997431,
+  "wall_fps": 0.4692116558673716,
+  "inference": {
+    "avg_ms": 1849.0302018020884,
+    "min_ms": 1705.5395920033334,
+    "max_ms": 1943.8716180011397,
+    "p50_ms": 1865.0673119991552,
+    "p95_ms": 1943.8716180011397,
+    "fps": 0.5408240487501974,
+    "n": 5
+  },
+  "per_frame": [
+    {
+      "output_index": 0,
+      "source_index": 0,
+      "infer_ms": 1851.668362003693,
+      "fps": 0.5400535109418291
+    },
+    {
+      "output_index": 1,
+      "source_index": 1,
+      "infer_ms": 1865.0673119991552,
+      "fps": 0.5361736777897338
+    },
+    {
+      "output_index": 2,
+      "source_index": 2,
+      "infer_ms": 1879.0041250031209,
+      "fps": 0.5321968093062803
+    },
+    {
+      "output_index": 3,
+      "source_index": 3,
+      "infer_ms": 1705.5395920033334,
+      "fps": 0.5863247060863572
+    },
+    {
+      "output_index": 4,
+      "source_index": 4,
+      "infer_ms": 1943.8716180011397,
+      "fps": 0.5144372656813048
+    }
+  ]
+}

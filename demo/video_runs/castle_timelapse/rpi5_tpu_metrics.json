@@ -1,0 +1,172 @@
+{
+  "name": "RPi5 + Coral TPU INT8 192",
+  "backend": "tflite",
+  "model": "/home/rpi5/repnext-pipeline/shrink_w48_20260615/repnext_m5_tanhgelu_real_full_192_logits_full_integer_quant_dwpatched_edgetpu.tflite",
+  "weights": null,
+  "input_video": null,
+  "input_frames": "input_frames",
+  "output_video": null,
+  "output_frames": "rpi5_tpu_frames",
+  "size": 192,
+  "normalize": "zero-one",
+  "frames": 24,
+  "input_fps": 24.0,
+  "output_fps": 12.31167550723417,
+  "wall_time_s": 2.8232152340005996,
+  "wall_fps": 8.500945911230126,
+  "inference": {
+    "avg_ms": 81.22371316661277,
+    "min_ms": 79.81659899996885,
+    "max_ms": 102.43819000061194,
+    "p50_ms": 80.32875149910979,
+    "p95_ms": 80.70536499872105,
+    "fps": 12.31167550723417,
+    "n": 24
+  },
+  "per_frame": [
+    {
+      "output_index": 0,
+      "source_index": 0,
+      "infer_ms": 102.43819000061194,
+      "fps": 9.761984275532653
+    },
+    {
+      "output_index": 1,
+      "source_index": 1,
+      "infer_ms": 80.52793800015934,
+      "fps": 12.418050490725609
+    },
+    {
+      "output_index": 2,
+      "source_index": 2,
+      "infer_ms": 80.51084599901515,
+      "fps": 12.42068677321106
+    },
+    {
+      "output_index": 3,
+      "source_index": 3,
+      "infer_ms": 80.70536499872105,
+      "fps": 12.390749983174565
+    },
+    {
+      "output_index": 4,
+      "source_index": 4,
+      "infer_ms": 80.49086400023953,
+      "fps": 12.423770230581997
+    },
+    {
+      "output_index": 5,
+      "source_index": 5,
+      "infer_ms": 80.23341700027231,
+      "fps": 12.463634697206103
+    },
+    {
+      "output_index": 6,
+      "source_index": 6,
+      "infer_ms": 79.82752600037202,
+      "fps": 12.527007288129408
+    },
+    {
+      "output_index": 7,
+      "source_index": 7,
+      "infer_ms": 80.14578700021957,
+      "fps": 12.477262217130145
+    },
+    {
+      "output_index": 8,
+      "source_index": 8,
+      "infer_ms": 79.81659899996885,
+      "fps": 12.528722252377483
+    },
+    {
+      "output_index": 9,
+      "source_index": 9,
+      "infer_ms": 80.2954740011046,
+      "fps": 12.454002077206038
+    },
+    {
+      "output_index": 10,
+      "source_index": 10,
+      "infer_ms": 80.42152999951213,
+      "fps": 12.434481164509881
+    },
+    {
+      "output_index": 11,
+      "source_index": 11,
+      "infer_ms": 80.5435860002035,
+      "fps": 12.415637913085636
+    },
+    {
+      "output_index": 12,
+      "source_index": 12,
+      "infer_ms": 80.16156500161742,
+      "fps": 12.47480634865129
+    },
+    {
+      "output_index": 13,
+      "source_index": 13,
+      "infer_ms": 80.53379000011773,
+      "fps": 12.41714813121968
+    },
+    {
+      "output_index": 14,
+      "source_index": 14,
+      "infer_ms": 80.04421300029207,
+      "fps": 12.49309553454353
+    },
+    {
+      "output_index": 15,
+      "source_index": 15,
+      "infer_ms": 80.47062299920071,
+      "fps": 12.426895216282004
+    },
+    {
+      "output_index": 16,
+      "source_index": 16,
+      "infer_ms": 80.24502800071787,
+      "fps": 12.461831279952374
+    },
+    {
+      "output_index": 17,
+      "source_index": 17,
+      "infer_ms": 80.50351199926808,
+      "fps": 12.421818317803226
+    },
+    {
+      "output_index": 18,
+      "source_index": 18,
+      "infer_ms": 80.01443399916752,
+      "fps": 12.497745094471382
+    },
+    {
+      "output_index": 19,
+      "source_index": 19,
+      "infer_ms": 80.15667600011511,
+      "fps": 12.475567225349563
+    },
+    {
+      "output_index": 20,
+      "source_index": 20,
+      "infer_ms": 80.34701099859376,
+      "fps": 12.446013704448845
+    },
+    {
+      "output_index": 21,
+      "source_index": 21,
+      "infer_ms": 80.31049199962581,
+      "fps": 12.451673188662065
+    },
+    {
+      "output_index": 22,
+      "source_index": 22,
+      "infer_ms": 80.21376900069299,
+      "fps": 12.466687608100807
+    },
+    {
+      "output_index": 23,
+      "source_index": 23,
+      "infer_ms": 80.41088099889748,
+      "fps": 12.43612789186716
+    }
+  ]
+}

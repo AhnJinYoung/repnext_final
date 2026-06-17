@@ -1,0 +1,58 @@
+{
+  "name": "RPi5 LiteRT 256",
+  "backend": "tflite",
+  "model": "/home/rpi5/repnext-pipeline/lowres_fixed_20260613/repnext_m5_tanhgelu_real_full_256_logits_dynamic_range_quant.tflite",
+  "weights": null,
+  "input_video": null,
+  "input_frames": "input_frames",
+  "output_video": null,
+  "output_frames": "rpi5_cpu_frames",
+  "size": 256,
+  "normalize": "zero-one",
+  "frames": 5,
+  "input_fps": 24.0,
+  "output_fps": 2.8181484986976653,
+  "wall_time_s": 2.5264955109996663,
+  "wall_fps": 1.979025879219407,
+  "inference": {
+    "avg_ms": 354.84290500025963,
+    "min_ms": 343.2095110001683,
+    "max_ms": 396.2503149996337,
+    "p50_ms": 344.41832400079875,
+    "p95_ms": 396.2503149996337,
+    "fps": 2.8181484986976653,
+    "n": 5
+  },
+  "per_frame": [
+    {
+      "output_index": 0,
+      "source_index": 0,
+      "infer_ms": 396.2503149996337,
+      "fps": 2.5236572998078866
+    },
+    {
+      "output_index": 1,
+      "source_index": 1,
+      "infer_ms": 343.9600839992636,
+      "fps": 2.907314094045113
+    },
+    {
+      "output_index": 2,
+      "source_index": 2,
+      "infer_ms": 344.41832400079875,
+      "fps": 2.903445985056477
+    },
+    {
+      "output_index": 3,
+      "source_index": 3,
+      "infer_ms": 343.2095110001683,
+      "fps": 2.9136721680172486
+    },
+    {
+      "output_index": 4,
+      "source_index": 4,
+      "infer_ms": 346.37629100143386,
+      "fps": 2.8870336278179627
+    }
+  ]
+}

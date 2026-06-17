@@ -32,3 +32,21 @@ teacher_cache/
 demo/activation_maps*/
 demo/**/frames/
 demo/**/demo_results.json
+demo/video_runs*/**/input_frames/
+demo/video_runs*/**/native*_frames/
+demo/video_runs*/**/litert*_frames/
+demo/video_runs*/**/rpi5_*_frames/
+demo/video_runs*/**/native_realtime_sparse_input_frames/
+
+# converter scratch SavedModel exports
+artifacts/**/fingerprint.pb
+artifacts/**/saved_model.pb
+artifacts/**/variables/
+demo/**/input_frames/
+demo/**/*_frames/
+demo/**/native_realtime_sparse_input_frames/
+
+# TensorFlow SavedModel scratch exports
+artifacts/**/fingerprint.pb
+artifacts/**/saved_model.pb
+artifacts/**/variables/

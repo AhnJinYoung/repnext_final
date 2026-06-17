@@ -1,0 +1,136 @@
+# Reproduction environment for this repository.
+#
+# Verified locally on Python 3.12.3 across:
+# - system Python: PyTorch / ONNX export / plotting
+# - /workspace/tvm/local-convert-env: TensorFlow / onnx2tf / LiteRT conversion
+# - .venv-video: imageio video IO
+#
+# Install with:
+#   python3.12 -m venv .venv
+#   . .venv/bin/activate
+#   python -m pip install --upgrade pip
+#   python -m pip install -r requirements.txt
+#
+# PyTorch CPU wheels are resolved from the official PyTorch index.
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+# Core numeric / image / plotting stack.
+numpy==1.26.4
+pillow==12.2.0
+matplotlib==3.10.9
+contourpy==1.3.3
+cycler==0.12.1
+fonttools==4.62.1
+kiwisolver==1.5.0
+pyparsing==3.1.1
+python-dateutil==2.9.0.post0
+six==1.17.0
+packaging==26.2
+tqdm==4.67.3
+scipy==1.17.1
+
+# PyTorch baseline, ONNX export, and QAT/distillation training.
+torch==2.2.2+cpu
+torchvision==0.17.2+cpu
+cloudpickle==3.1.2
+einops==0.7.0
+filelock==3.25.2
+fvcore==0.1.5.post20221221
+fsspec==2026.2.0
+iopath==0.1.10
+Jinja2==3.1.2
+MarkupSafe==3.0.3
+mpmath==1.3.0
+networkx==3.6.1
+portalocker==3.2.0
+sympy==1.14.0
+typing_extensions==4.15.0
+yacs==0.1.8
+
+# Video decoding/encoding used by demo/video_segmentation_demo.py and
+# realtime comparison video builders.
+imageio==2.37.3
+imageio-ffmpeg==0.6.0
+
+# ONNX, TensorFlow, LiteRT, and onnx2tf conversion stack.
+tensorflow==2.19.0
+tf_keras==2.19.0
+keras==3.14.0
+tensorboard==2.19.0
+tensorboard-data-server==0.7.2
+ai-edge-litert==2.1.0
+flatbuffers==25.12.19
+protobuf==4.25.5
+onnx==1.19.1
+onnxruntime==1.23.0
+onnxsim==0.4.36
+onnx2tf==1.29.24
+onnx_graphsurgeon==0.5.8
+onnxoptimizer==0.4.2
+onnx2json==2.0.4
+json2onnx==2.0.3
+opencv-python==4.11.0.86
+
+# TensorFlow / Keras runtime dependencies observed in local-convert-env.
+absl-py==2.4.0
+astunparse==1.6.3
+backports.strenum==1.2.8
+gast==0.7.0
+google-pasta==0.2.0
+grpcio==1.80.0
+h5py==3.11.0
+libclang==18.1.1
+ml_dtypes==0.5.1
+opt_einsum==3.4.0
+optree==0.19.0
+termcolor==3.3.0
+wrapt==2.1.2
+Werkzeug==3.1.8
+
+# onnx2tf helper packages observed in the conversion environment.
+sng4onnx==2.0.1
+sne4onnx==2.0.1
+simple_onnx_processing_tools==1.1.32
+sam4onnx==2.0.0
+sbi4onnx==1.0.7
+scc4onnx==1.0.7
+scs4onnx==1.0.18
+sde4onnx==1.0.0
+sed4onnx==1.0.5
+sio4onnx==1.0.3
+sit4onnx==1.0.10
+sna4onnx==1.0.6
+snc4onnx==1.0.14
+snd4onnx==1.1.7
+soa4onnx==1.0.5
+soc4onnx==1.0.2
+sod4onnx==1.0.0
+sog4onnx==1.0.17
+sor4onnx==1.0.7
+spo4onnx==1.0.5
+ssc4onnx==1.0.8
+ssi4onnx==1.0.4
+svs4onnx==1.0.0
+
+# CLI / logging dependencies pulled in by ONNX Runtime, onnx2tf, and reports.
+certifi==2026.4.22
+charset-normalizer==3.4.7
+coloredlogs==15.0.1
+humanfriendly==10.0
+idna==3.13
+Markdown==3.10.2
+markdown-it-py==4.0.0
+mdurl==0.1.2
+namex==0.1.0
+psutil==5.9.5
+Pygments==2.20.0
+requests==2.32.5
+rich==15.0.0
+urllib3==2.6.3
+
+# Raspberry Pi / Coral Edge TPU runtime.
+# These are platform-specific packages. They were not installed in the local
+# x86_64 environments, but demo/video_segmentation_demo.py uses pycoral when
+# --delegate edgetpu is selected and can use tflite_runtime on Raspberry Pi.
+pycoral==2.0.0; platform_machine == "aarch64"
+tflite-runtime==2.14.0; platform_machine == "aarch64"

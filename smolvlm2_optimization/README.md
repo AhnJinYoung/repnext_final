@@ -16,13 +16,22 @@ dependency.
 The autoregressive language-generation loop is dynamic, but the visual encoder
 has fixed tensor shapes after preprocessing. The pipeline therefore uses:
 
-- **TVM Relay CUDA compilation** for the fixed-shape SmolVLM2 vision tower.
+- **TVM Relay + AutoTVM CUDA compilation** for the fixed-shape SmolVLM2
+  vision tower. The script extracts tunable Relay tasks, runs AutoTVM schedule
+  search, writes a tuning log, then rebuilds with the best measured schedules.
 - **Native PyTorch** as the baseline end-to-end VLM generation path.
 - **TorchInductor via `torch.compile`** as the end-to-end compiler path, with
   fallback to native if the server environment cannot compile the full model.
 
 This keeps TVM as the main DL compiler artifact while avoiding brittle attempts
 to compile the entire dynamic `generate()` loop.
+
+The **vision tower** is the image/video encoder inside SmolVLM2. It converts
+sampled video frames into visual embeddings before the language model consumes
+those embeddings and generates text. It is the most practical TVM target here
+because the preprocessed frame tensor has a fixed shape such as
+`[1, 3, 384, 384]`, while autoregressive token generation has dynamic sequence
+length and KV-cache control flow.
 
 ## One-command Server Run
 
@@ -50,6 +59,7 @@ MAX_NEW_TOKENS=64 \
 BENCH_ITERS=10 \
 DEMO_SECONDS=10 \
 VIDEO_SAMPLE_FRAMES=8 \
+AUTOTVM_TRIALS=64 \
 bash smolvlm2_optimization/run_smolvlm2_a100_pipeline.sh
 ```
 
@@ -64,10 +74,11 @@ smolvlm2_optimization/runs/a100_smolvlm2_2b/
 Important files:
 
 ```text
-benchmark_results.json                      full benchmark and generated text
-SUMMARY.md                                  human-readable result table
-artifacts/smolvlm2_vision_tvm_cuda_sm80.so  TVM compiled vision tower
-demo_outputs/*_source_native_optimized.mp4  Source | Native | Optimized demos
+benchmark_results.json                               full benchmark and generated text
+SUMMARY.md                                           human-readable result table
+artifacts/autotvm_smolvlm2_vision_cuda_sm80.log      AutoTVM tuning log
+artifacts/smolvlm2_vision_tvm_autotvm_cuda_sm80.so   TVM compiled vision tower
+demo_outputs/*_source_native_optimized.mp4           Source | Native | Optimized demos
 ```
 
 The lightweight accuracy metric is a keyword-hit score for the three known demo

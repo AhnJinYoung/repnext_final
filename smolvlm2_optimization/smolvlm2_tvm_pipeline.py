@@ -2,10 +2,11 @@
 """A100 SmolVLM2 benchmark/demo pipeline with TVM vision-tower compilation.
 
 The full autoregressive VLM has dynamic token generation, so the stable compiler
-target is the fixed-shape vision tower. End-to-end generation is benchmarked as
-native PyTorch and as a compiler-enabled PyTorch path. TVM compilation and
-latency are recorded separately for the vision tower because that is the part
-with static image tensor shapes and repeated work for video frames.
+target is the fixed-shape vision tower. AutoTVM tunes Relay tasks from that
+vision graph, then Relay rebuilds the graph with the best measured schedules.
+End-to-end generation is benchmarked as native PyTorch and as a compiler-enabled
+PyTorch path. TVM latency is recorded separately for the vision tower because
+that is the static visual encoder inside the dynamic VLM generation pipeline.
 """
 
 from __future__ import annotations
@@ -282,18 +283,31 @@ def compile_and_benchmark_tvm(
     example: torch.Tensor,
     work_dir: Path,
     bench_iters: int,
+    autotvm_trials: int,
+    require_tvm: bool,
 ) -> dict[str, Any]:
     result: dict[str, Any] = {
         "status": "not_run",
         "target": "cuda -arch=sm_80",
         "input_shape": list(example.shape),
+        "autotvm_trials_per_task": autotvm_trials,
     }
     try:
         import tvm
+        from tvm import autotvm
         from tvm import relay
         from tvm.contrib import graph_executor
     except Exception as exc:
         result.update({"status": "import_failed", "error": repr(exc)})
+        if require_tvm:
+            raise RuntimeError(f"TVM Relay/AutoTVM import failed: {exc}") from exc
+        return result
+
+    if not tvm.runtime.enabled("cuda"):
+        error = "TVM CUDA runtime is not enabled"
+        result.update({"status": "cuda_unavailable", "error": error})
+        if require_tvm:
+            raise RuntimeError(error)
         return result
 
     wrapper = VisionWrapper(vision).eval().cpu().float()
@@ -302,13 +316,64 @@ def compile_and_benchmark_tvm(
         scripted = torch.jit.trace(wrapper, cpu_example, strict=False)
         mod, params = relay.frontend.from_pytorch(scripted, [("pixel_values", tuple(cpu_example.shape))])
         target = tvm.target.Target("cuda -arch=sm_80")
-        with tvm.transform.PassContext(opt_level=3):
-            lib = relay.build(mod, target=target, params=params)
-        artifact = work_dir / "artifacts" / "smolvlm2_vision_tvm_cuda_sm80.so"
+
+        tuning_log = work_dir / "artifacts" / "autotvm_smolvlm2_vision_cuda_sm80.log"
+        tuning_log.parent.mkdir(parents=True, exist_ok=True)
+        tasks = autotvm.task.extract_from_program(
+            mod["main"],
+            target=target,
+            params=params,
+            ops=(relay.op.get("nn.conv2d"), relay.op.get("nn.dense"), relay.op.get("nn.batch_matmul")),
+        )
+        result["autotvm_tasks"] = [
+            {
+                "name": task.name,
+                "workload": str(task.workload),
+                "config_space": len(task.config_space),
+            }
+            for task in tasks
+        ]
+        if not tasks:
+            error = "AutoTVM extracted zero tunable Relay tasks from the vision tower"
+            result.update({"status": "no_autotvm_tasks", "error": error})
+            if require_tvm:
+                raise RuntimeError(error)
+            return result
+
+        if tasks and autotvm_trials > 0:
+            measure_option = autotvm.measure_option(
+                builder=autotvm.LocalBuilder(timeout=20),
+                runner=autotvm.LocalRunner(number=5, repeat=1, timeout=20, min_repeat_ms=150),
+            )
+            tmp_log = tuning_log.with_suffix(".tmp.log")
+            if tmp_log.exists():
+                tmp_log.unlink()
+            for task_idx, task in enumerate(tasks):
+                trials = min(autotvm_trials, len(task.config_space))
+                tuner = autotvm.tuner.RandomTuner(task)
+                tuner.tune(
+                    n_trial=trials,
+                    measure_option=measure_option,
+                    callbacks=[
+                        autotvm.callback.progress_bar(trials, prefix=f"[Task {task_idx + 1}/{len(tasks)}] "),
+                        autotvm.callback.log_to_file(str(tmp_log)),
+                    ],
+                )
+            autotvm.record.pick_best(str(tmp_log), str(tuning_log))
+            tmp_log.unlink(missing_ok=True)
+            result["autotvm_log"] = str(tuning_log)
+
+        build_context = autotvm.apply_history_best(str(tuning_log)) if tuning_log.exists() else tvm.transform.PassContext()
+        with build_context:
+            with tvm.transform.PassContext(opt_level=3):
+                lib = relay.build(mod, target=target, params=params)
+        artifact = work_dir / "artifacts" / "smolvlm2_vision_tvm_autotvm_cuda_sm80.so"
         artifact.parent.mkdir(parents=True, exist_ok=True)
         lib.export_library(str(artifact))
 
         dev = tvm.cuda(0)
+        if not dev.exist:
+            raise RuntimeError("tvm.cuda(0) does not exist")
         module = graph_executor.GraphModule(lib["default"](dev))
         module.set_input("pixel_values", tvm.nd.array(cpu_example.numpy(), dev))
         for _ in range(2):
@@ -321,11 +386,13 @@ def compile_and_benchmark_tvm(
                 "artifact": str(artifact),
                 "mean_ms": mean_ms,
                 "results": [float(x * 1000.0) for x in prof.results],
-                "speed_note": "TVM graph executor benchmark for the fixed-shape vision tower only.",
+                "speed_note": "AutoTVM-tuned TVM graph executor benchmark for the fixed-shape vision tower only.",
             }
         )
     except Exception as exc:
         result.update({"status": "compile_or_benchmark_failed", "error": repr(exc)})
+        if require_tvm:
+            raise RuntimeError(f"TVM AutoTVM compile/benchmark failed: {exc}") from exc
     finally:
         vision.cuda().to(dtype=torch.bfloat16).eval()
     return result
@@ -424,7 +491,7 @@ def make_concat_demo(
                     ),
                     draw_panel(
                         base,
-                        "Optimized compiler path",
+                        "TorchInductor end-to-end",
                         f"{optimized.latency_ms:.1f} ms / {optimized.tokens} new tokens",
                         optimized.text,
                     ),
@@ -443,7 +510,8 @@ def write_summary(work_dir: Path, results: dict[str, Any]) -> None:
         "## Compiler Strategy",
         "",
         "- TVM Relay compiles the fixed-shape SmolVLM2 vision tower for CUDA `sm_80`.",
-        "- End-to-end text generation is benchmarked as native PyTorch and as a compiler-enabled PyTorch path.",
+        "- AutoTVM extracts Relay tasks from the vision graph, tunes CUDA schedules, and rebuilds with the best tuning log.",
+        "- End-to-end text generation is benchmarked as native PyTorch and as a TorchInductor path; TVM is reported as a vision-tower microbenchmark because `generate()` is a dynamic autoregressive loop.",
         "- Accuracy is a lightweight keyword-hit score for the three demo videos, used only as a reproducible smoke benchmark.",
         "",
         "## Latency",
@@ -469,6 +537,10 @@ def write_summary(work_dir: Path, results: dict[str, Any]) -> None:
     )
     if tvm_result.get("artifact"):
         lines.append(f"- Artifact: `{tvm_result['artifact']}`")
+    if tvm_result.get("autotvm_log"):
+        lines.append(f"- AutoTVM log: `{tvm_result['autotvm_log']}`")
+    if "autotvm_tasks" in tvm_result:
+        lines.append(f"- AutoTVM tasks: `{len(tvm_result['autotvm_tasks'])}`")
     if tvm_result.get("error"):
         lines.append(f"- Error: `{tvm_result['error']}`")
     lines.extend(["", "## Demo Videos", ""])
@@ -487,6 +559,8 @@ def main() -> None:
     parser.add_argument("--bench-iters", type=int, default=5)
     parser.add_argument("--demo-seconds", type=float, default=10.0)
     parser.add_argument("--video-sample-frames", type=int, default=8)
+    parser.add_argument("--autotvm-trials", type=int, default=64)
+    parser.add_argument("--allow-tvm-failure", action="store_true")
     args = parser.parse_args()
 
     args.work_dir.mkdir(parents=True, exist_ok=True)
@@ -500,7 +574,14 @@ def main() -> None:
     sample_image.save(sample_path)
     vision_input = extract_pixel_values(processor, sample_path, device)
     torch_vision_stats = benchmark_torch_vision(VisionWrapper(vision_module).cuda().eval(), vision_input, args.bench_iters)
-    tvm_vision = compile_and_benchmark_tvm(vision_module, vision_input, args.work_dir, args.bench_iters)
+    tvm_vision = compile_and_benchmark_tvm(
+        vision_module,
+        vision_input,
+        args.work_dir,
+        args.bench_iters,
+        args.autotvm_trials,
+        require_tvm=not args.allow_tvm_failure,
+    )
 
     sampled_frames = {
         str(video): sample_video_frames(
@@ -566,6 +647,7 @@ def main() -> None:
         "prompt": args.prompt,
         "max_new_tokens": args.max_new_tokens,
         "video_sample_frames": args.video_sample_frames,
+        "autotvm_trials": args.autotvm_trials,
         "vision_module": vision_name,
         "optimized_method": optimized_method,
         "torch_vision": torch_vision_stats,

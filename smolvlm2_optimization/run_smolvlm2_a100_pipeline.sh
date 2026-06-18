@@ -10,6 +10,7 @@ MAX_NEW_TOKENS="${MAX_NEW_TOKENS:-64}"
 BENCH_ITERS="${BENCH_ITERS:-5}"
 DEMO_SECONDS="${DEMO_SECONDS:-10}"
 VIDEO_SAMPLE_FRAMES="${VIDEO_SAMPLE_FRAMES:-8}"
+AUTOTVM_TRIALS="${AUTOTVM_TRIALS:-64}"
 VIDEO_DIR="${VIDEO_DIR:-${ROOT_DIR}/demo/video_sources_eye_new}"
 
 VIDEOS=(
@@ -27,11 +28,30 @@ python -m pip install --upgrade pip setuptools wheel
 python -m pip install -r "${SMOL_DIR}/requirements-smolvlm2.txt"
 
 if ! python - <<'PY'
-import tvm  # noqa: F401
+import tvm
+from tvm import autotvm, relay
+from tvm.contrib import graph_executor
+assert tvm.runtime.enabled("cuda"), "TVM was installed without CUDA runtime support"
 PY
 then
-  python -m pip install apache-tvm || \
-  python -m pip install --pre -f https://tlcpack.ai/wheels tlcpack-nightly-cu121
+  python -m pip uninstall -y tvm apache-tvm tlcpack-nightly tlcpack-nightly-cu121 || true
+  python -m pip install --pre -f https://tlcpack.ai/wheels tlcpack-nightly-cu121 || \
+  python -m pip install apache-tvm
+fi
+
+python - <<'PY'
+import tvm
+from tvm import autotvm, relay
+from tvm.contrib import graph_executor
+if not tvm.runtime.enabled("cuda"):
+    raise SystemExit("TVM CUDA runtime is not enabled. Install a CUDA-enabled TVM wheel/build before running.")
+print("TVM:", getattr(tvm, "__version__", "unknown"), "CUDA enabled:", tvm.runtime.enabled("cuda"))
+print("TVM path:", tvm.__file__)
+print("Relay/AutoTVM import check: ok")
+PY
+
+if ! command -v nvcc >/dev/null 2>&1; then
+  echo "warning: nvcc is not in PATH. TVM CUDA codegen may fail if the wheel needs nvcc for module export."
 fi
 
 if python - <<'PY'
@@ -52,4 +72,5 @@ python "${SMOL_DIR}/smolvlm2_tvm_pipeline.py" \
   --bench-iters "${BENCH_ITERS}" \
   --demo-seconds "${DEMO_SECONDS}" \
   --video-sample-frames "${VIDEO_SAMPLE_FRAMES}" \
+  --autotvm-trials "${AUTOTVM_TRIALS}" \
   --videos "${VIDEOS[@]}"

@@ -9,6 +9,7 @@ MODEL_ID="${MODEL_ID:-HuggingFaceTB/SmolVLM2-2.2B-Instruct}"
 MAX_NEW_TOKENS="${MAX_NEW_TOKENS:-64}"
 BENCH_ITERS="${BENCH_ITERS:-5}"
 DEMO_SECONDS="${DEMO_SECONDS:-10}"
+VIDEO_SAMPLE_FRAMES="${VIDEO_SAMPLE_FRAMES:-8}"
 VIDEO_DIR="${VIDEO_DIR:-${ROOT_DIR}/demo/video_sources_eye_new}"
 
 VIDEOS=(
@@ -50,4 +51,5 @@ python "${SMOL_DIR}/smolvlm2_tvm_pipeline.py" \
   --max-new-tokens "${MAX_NEW_TOKENS}" \
   --bench-iters "${BENCH_ITERS}" \
   --demo-seconds "${DEMO_SECONDS}" \
+  --video-sample-frames "${VIDEO_SAMPLE_FRAMES}" \
   --videos "${VIDEOS[@]}"

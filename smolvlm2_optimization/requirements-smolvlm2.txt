@@ -1,8 +1,6 @@
 --extra-index-url https://download.pytorch.org/whl/cu121
 
 accelerate==1.7.0
-av==14.4.0
-decord==0.6.0
 einops==0.8.1
 evaluate==0.4.3
 huggingface-hub==0.32.4
@@ -25,3 +23,8 @@ transformers==4.52.4
 
 # TVM wheels vary by CUDA/Python build. The runner script first tries
 # apache-tvm, then tlcpack nightly CUDA wheels if needed.
+#
+# Do not add PyAV (`av`) as a hard requirement here. Some servers cannot fetch
+# a compatible wheel and then try to build against system FFmpeg development
+# headers. The pipeline uses imageio-ffmpeg for mp4 IO and feeds sampled video
+# frames to SmolVLM2 as multi-image inputs.

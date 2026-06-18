@@ -28,6 +28,7 @@ from transformers import AutoModelForImageTextToText, AutoProcessor
 
 
 DEFAULT_PROMPT = (
+    "These images are sampled in time order from one video. "
     "Describe the important actions, people, objects, and scene context in this video. "
     "Answer in two concise sentences."
 )
@@ -96,14 +97,55 @@ def load_model(model_id: str) -> tuple[Any, Any]:
     return processor, model
 
 
-def prepare_inputs(processor: Any, video_path: Path, prompt: str, device: torch.device) -> dict[str, torch.Tensor]:
+def sample_video_frames(video_path: Path, output_dir: Path, num_frames: int) -> list[Path]:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    existing = sorted(output_dir.glob("frame_*.jpg"))
+    if len(existing) >= num_frames:
+        return existing[:num_frames]
+
+    reader = imageio.get_reader(str(video_path))
+    paths: list[Path] = []
+    try:
+        meta = reader.get_meta_data()
+        total = meta.get("nframes")
+        if not isinstance(total, int) or total <= 0 or total > 10_000_000:
+            total = None
+        if total:
+            indices = np.linspace(0, max(0, total - 1), num_frames, dtype=int).tolist()
+            for out_idx, frame_idx in enumerate(indices):
+                frame = reader.get_data(int(frame_idx))
+                path = output_dir / f"frame_{out_idx:03d}.jpg"
+                Image.fromarray(np.asarray(frame[..., :3], dtype=np.uint8)).save(path, quality=92)
+                paths.append(path)
+        else:
+            frames = []
+            for idx, frame in enumerate(reader):
+                frames.append((idx, np.asarray(frame[..., :3], dtype=np.uint8)))
+            if not frames:
+                raise RuntimeError(f"no frames decoded from {video_path}")
+            indices = np.linspace(0, len(frames) - 1, num_frames, dtype=int).tolist()
+            for out_idx, frame_pos in enumerate(indices):
+                frame = frames[int(frame_pos)][1]
+                path = output_dir / f"frame_{out_idx:03d}.jpg"
+                Image.fromarray(frame).save(path, quality=92)
+                paths.append(path)
+    finally:
+        reader.close()
+    return paths
+
+
+def prepare_inputs(
+    processor: Any,
+    image_paths: list[Path],
+    prompt: str,
+    device: torch.device,
+) -> dict[str, torch.Tensor]:
+    content = [{"type": "image", "path": str(path)} for path in image_paths]
+    content.append({"type": "text", "text": prompt})
     messages = [
         {
             "role": "user",
-            "content": [
-                {"type": "video", "path": str(video_path)},
-                {"type": "text", "text": prompt},
-            ],
+            "content": content,
         }
     ]
     inputs = processor.apply_chat_template(
@@ -444,6 +486,7 @@ def main() -> None:
     parser.add_argument("--max-new-tokens", type=int, default=64)
     parser.add_argument("--bench-iters", type=int, default=5)
     parser.add_argument("--demo-seconds", type=float, default=10.0)
+    parser.add_argument("--video-sample-frames", type=int, default=8)
     args = parser.parse_args()
 
     args.work_dir.mkdir(parents=True, exist_ok=True)
@@ -459,7 +502,18 @@ def main() -> None:
     torch_vision_stats = benchmark_torch_vision(VisionWrapper(vision_module).cuda().eval(), vision_input, args.bench_iters)
     tvm_vision = compile_and_benchmark_tvm(vision_module, vision_input, args.work_dir, args.bench_iters)
 
-    prepared = {str(video): prepare_inputs(processor, video, args.prompt, device) for video in args.videos}
+    sampled_frames = {
+        str(video): sample_video_frames(
+            video,
+            args.work_dir / "sampled_video_frames" / video.stem,
+            args.video_sample_frames,
+        )
+        for video in args.videos
+    }
+    prepared = {
+        str(video): prepare_inputs(processor, sampled_frames[str(video)], args.prompt, device)
+        for video in args.videos
+    }
 
     native_results: dict[str, GenerationResult] = {}
     for video in args.videos:
@@ -511,6 +565,7 @@ def main() -> None:
         "model_id": args.model_id,
         "prompt": args.prompt,
         "max_new_tokens": args.max_new_tokens,
+        "video_sample_frames": args.video_sample_frames,
         "vision_module": vision_name,
         "optimized_method": optimized_method,
         "torch_vision": torch_vision_stats,

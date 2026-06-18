@@ -6,10 +6,12 @@ NVIDIA A100 80 GB machine.
 
 ## Why This Shape
 
-SmolVLM2 accepts video, image, and text inputs and generates text. Hugging Face's
-model card describes it as an Idefics3-based image/multi-image/video/text model,
-and the Transformers API accepts video with chat content like
-`{"type": "video", "path": "/path/to/video.mp4"}`.
+SmolVLM2 accepts video, image, multi-image, and text inputs and generates text.
+Hugging Face's model card describes it as an Idefics3-based
+image/multi-image/video/text model. The server pipeline decodes each mp4 with
+`imageio-ffmpeg`, samples frames in time order, and feeds them as multi-image
+inputs. This avoids making PyAV/FFmpeg development headers a hard server
+dependency.
 
 The autoregressive language-generation loop is dynamic, but the visual encoder
 has fixed tensor shapes after preprocessing. The pipeline therefore uses:
@@ -47,6 +49,7 @@ WORK_DIR=/data/smolvlm2_run \
 MAX_NEW_TOKENS=64 \
 BENCH_ITERS=10 \
 DEMO_SECONDS=10 \
+VIDEO_SAMPLE_FRAMES=8 \
 bash smolvlm2_optimization/run_smolvlm2_a100_pipeline.sh
 ```
 

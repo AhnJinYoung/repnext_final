@@ -12,6 +12,7 @@ that is the static visual encoder inside the dynamic VLM generation pipeline.
 from __future__ import annotations
 
 import argparse
+import importlib
 import inspect
 import json
 import math
@@ -294,8 +295,8 @@ def compile_and_benchmark_tvm(
     }
     try:
         import tvm
-        from tvm import autotvm
-        from tvm import relay
+        autotvm = importlib.import_module("tvm.autotvm")
+        relay = importlib.import_module("tvm.relay")
         from tvm.contrib import graph_executor
     except Exception as exc:
         result.update({"status": "import_failed", "error": repr(exc)})

@@ -22,8 +22,9 @@ torchvision==0.20.1+cu121
 tqdm==4.67.1
 transformers==4.52.4
 
-# TVM wheels vary by CUDA/Python build. The runner script first tries
-# apache-tvm, then tlcpack nightly CUDA wheels if needed.
+# TVM wheels vary by CUDA/Python build. The runner script installs apache-tvm
+# and then verifies that tvm.relay, tvm.autotvm, and CUDA runtime support are
+# actually available before running the benchmark.
 #
 # Do not add PyAV (`av`) as a hard requirement here. Some servers cannot fetch
 # a compatible wheel and then try to build against system FFmpeg development

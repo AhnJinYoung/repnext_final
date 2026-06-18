@@ -28,20 +28,23 @@ python -m pip install --upgrade pip setuptools wheel
 python -m pip install -r "${SMOL_DIR}/requirements-smolvlm2.txt"
 
 if ! python - <<'PY'
+import importlib
 import tvm
-from tvm import autotvm, relay
+autotvm = importlib.import_module("tvm.autotvm")
+relay = importlib.import_module("tvm.relay")
 from tvm.contrib import graph_executor
 assert tvm.runtime.enabled("cuda"), "TVM was installed without CUDA runtime support"
 PY
 then
   python -m pip uninstall -y tvm apache-tvm tlcpack-nightly tlcpack-nightly-cu121 || true
-  python -m pip install --pre -f https://tlcpack.ai/wheels tlcpack-nightly-cu121 || \
   python -m pip install apache-tvm
 fi
 
 python - <<'PY'
+import importlib
 import tvm
-from tvm import autotvm, relay
+autotvm = importlib.import_module("tvm.autotvm")
+relay = importlib.import_module("tvm.relay")
 from tvm.contrib import graph_executor
 if not tvm.runtime.enabled("cuda"):
     raise SystemExit("TVM CUDA runtime is not enabled. Install a CUDA-enabled TVM wheel/build before running.")

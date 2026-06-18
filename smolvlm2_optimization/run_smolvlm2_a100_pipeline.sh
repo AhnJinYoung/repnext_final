@@ -68,6 +68,7 @@ build_tvm_from_source() {
     git -C "${TVM_SOURCE_DIR}" submodule update --init --recursive
   fi
 
+  rm -rf "${TVM_SOURCE_DIR}/build"
   mkdir -p "${TVM_SOURCE_DIR}/build"
   cp "${TVM_SOURCE_DIR}/cmake/config.cmake" "${TVM_SOURCE_DIR}/build/config.cmake"
   python - "${TVM_SOURCE_DIR}/build/config.cmake" <<'PY'
@@ -78,7 +79,7 @@ path = Path(sys.argv[1])
 text = path.read_text()
 settings = {
     "USE_CUDA": "ON",
-    "USE_LLVM": "ON",
+    "USE_LLVM": "OFF",
     "USE_CUBLAS": "ON",
     "USE_CUDNN": "OFF",
     "USE_GTEST": "OFF",
@@ -101,10 +102,12 @@ PY
 
   if command -v ninja >/dev/null 2>&1; then
     cmake -S "${TVM_SOURCE_DIR}" -B "${TVM_SOURCE_DIR}/build" -G Ninja \
+      -DUSE_LLVM=OFF \
       -DUSE_GTEST=OFF \
       -DBUILD_TESTING=OFF
   else
     cmake -S "${TVM_SOURCE_DIR}" -B "${TVM_SOURCE_DIR}/build" \
+      -DUSE_LLVM=OFF \
       -DUSE_GTEST=OFF \
       -DBUILD_TESTING=OFF
   fi

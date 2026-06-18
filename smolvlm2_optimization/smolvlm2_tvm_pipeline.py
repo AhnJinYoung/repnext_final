@@ -328,7 +328,9 @@ def compile_and_benchmark_tvm(
     try:
         scripted = torch.jit.trace(wrapper, cpu_example, strict=False)
         mod, params = relay.frontend.from_pytorch(scripted, [("pixel_values", tuple(cpu_example.shape))])
-        target = tvm.target.cuda(arch="sm_80")
+        # Keep host codegen on the C backend so the TVM source build does not
+        # depend on system LLVM development packages.
+        target = tvm.target.Target("cuda -arch=sm_80", host="c")
 
         if meta_schedule is not None:
             tuning_dir = work_dir / "artifacts" / "meta_schedule_smolvlm2_vision_cuda_sm80"

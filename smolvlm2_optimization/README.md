@@ -72,7 +72,9 @@ provide `tvm.relay` for this pipeline.
 
 If that legacy wheel is not available from the server's pip indexes, the script
 falls back to building TVM from source at `TVM_GIT_REF=v0.14.0` with
-`USE_CUDA=ON`, `USE_LLVM=ON`, and `USE_CUBLAS=ON`. The source build path needs
+`USE_CUDA=ON`, `USE_LLVM=OFF`, and `USE_CUBLAS=ON`. LLVM is intentionally off
+to avoid server package drift around `LLVMConfig.cmake`; the Python pipeline
+uses TVM's C host target with CUDA device code. The source build path needs
 `git`, `cmake`, a C++ compiler, and `nvcc` in `PATH`.
 
 Useful TVM overrides:

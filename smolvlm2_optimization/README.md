@@ -70,6 +70,20 @@ project uses Relay/AutoTVM APIs. Do not let pip resolve to `apache-tvm`
 `0.25.0rc*`; those wheels use the newer Unity/Relax package layout and do not
 provide `tvm.relay` for this pipeline.
 
+If that legacy wheel is not available from the server's pip indexes, the script
+falls back to building TVM from source at `TVM_GIT_REF=v0.14.0` with
+`USE_CUDA=ON`, `USE_LLVM=ON`, and `USE_CUBLAS=ON`. The source build path needs
+`git`, `cmake`, a C++ compiler, and `nvcc` in `PATH`.
+
+Useful TVM overrides:
+
+```bash
+TVM_GIT_REF=v0.14.0 \
+TVM_SOURCE_DIR=/data/tvm-v0.14.0-src \
+TVM_TUNING_TRIALS=64 \
+bash smolvlm2_optimization/run_smolvlm2_a100_pipeline.sh
+```
+
 ## Outputs
 
 The default output directory is:

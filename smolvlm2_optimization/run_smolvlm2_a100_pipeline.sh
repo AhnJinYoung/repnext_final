@@ -81,6 +81,7 @@ settings = {
     "USE_LLVM": "ON",
     "USE_CUBLAS": "ON",
     "USE_CUDNN": "OFF",
+    "USE_GTEST": "OFF",
 }
 for key, value in settings.items():
     needle = f"set({key} "
@@ -99,9 +100,13 @@ path.write_text(text)
 PY
 
   if command -v ninja >/dev/null 2>&1; then
-    cmake -S "${TVM_SOURCE_DIR}" -B "${TVM_SOURCE_DIR}/build" -G Ninja
+    cmake -S "${TVM_SOURCE_DIR}" -B "${TVM_SOURCE_DIR}/build" -G Ninja \
+      -DUSE_GTEST=OFF \
+      -DBUILD_TESTING=OFF
   else
-    cmake -S "${TVM_SOURCE_DIR}" -B "${TVM_SOURCE_DIR}/build"
+    cmake -S "${TVM_SOURCE_DIR}" -B "${TVM_SOURCE_DIR}/build" \
+      -DUSE_GTEST=OFF \
+      -DBUILD_TESTING=OFF
   fi
   cmake --build "${TVM_SOURCE_DIR}/build" --parallel "$(nproc)"
   export TVM_LIBRARY_PATH="${TVM_SOURCE_DIR}/build"

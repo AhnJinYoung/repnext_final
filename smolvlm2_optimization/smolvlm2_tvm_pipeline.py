@@ -284,25 +284,37 @@ def compile_and_benchmark_tvm(
     example: torch.Tensor,
     work_dir: Path,
     bench_iters: int,
-    autotvm_trials: int,
+    tvm_tuning_trials: int,
     require_tvm: bool,
 ) -> dict[str, Any]:
     result: dict[str, Any] = {
         "status": "not_run",
         "target": "cuda -arch=sm_80",
         "input_shape": list(example.shape),
-        "autotvm_trials_per_task": autotvm_trials,
+        "tvm_tuning_trials": tvm_tuning_trials,
     }
     try:
         import tvm
-        autotvm = importlib.import_module("tvm.autotvm")
         relay = importlib.import_module("tvm.relay")
         from tvm.contrib import graph_executor
     except Exception as exc:
         result.update({"status": "import_failed", "error": repr(exc)})
         if require_tvm:
-            raise RuntimeError(f"TVM Relay/AutoTVM import failed: {exc}") from exc
+            raise RuntimeError(f"TVM Relay import failed: {exc}") from exc
         return result
+
+    autotvm = None
+    meta_schedule = None
+    try:
+        autotvm = importlib.import_module("tvm.autotvm")
+    except Exception:
+        try:
+            meta_schedule = importlib.import_module("tvm.meta_schedule")
+        except Exception as exc:
+            result.update({"status": "tuning_module_import_failed", "error": repr(exc)})
+            if require_tvm:
+                raise RuntimeError("TVM has neither AutoTVM nor MetaSchedule available") from exc
+            return result
 
     if not tvm.runtime.enabled("cuda"):
         error = "TVM CUDA runtime is not enabled"
@@ -316,59 +328,101 @@ def compile_and_benchmark_tvm(
     try:
         scripted = torch.jit.trace(wrapper, cpu_example, strict=False)
         mod, params = relay.frontend.from_pytorch(scripted, [("pixel_values", tuple(cpu_example.shape))])
-        target = tvm.target.Target("cuda -arch=sm_80")
+        target = tvm.target.cuda(arch="sm_80")
 
-        tuning_log = work_dir / "artifacts" / "autotvm_smolvlm2_vision_cuda_sm80.log"
-        tuning_log.parent.mkdir(parents=True, exist_ok=True)
-        tasks = autotvm.task.extract_from_program(
-            mod["main"],
-            target=target,
-            params=params,
-            ops=(relay.op.get("nn.conv2d"), relay.op.get("nn.dense"), relay.op.get("nn.batch_matmul")),
-        )
-        result["autotvm_tasks"] = [
-            {
-                "name": task.name,
-                "workload": str(task.workload),
-                "config_space": len(task.config_space),
-            }
-            for task in tasks
-        ]
-        if not tasks:
-            error = "AutoTVM extracted zero tunable Relay tasks from the vision tower"
-            result.update({"status": "no_autotvm_tasks", "error": error})
-            if require_tvm:
-                raise RuntimeError(error)
-            return result
-
-        if tasks and autotvm_trials > 0:
-            measure_option = autotvm.measure_option(
-                builder=autotvm.LocalBuilder(timeout=20),
-                runner=autotvm.LocalRunner(number=5, repeat=1, timeout=20, min_repeat_ms=150),
+        if meta_schedule is not None:
+            tuning_dir = work_dir / "artifacts" / "meta_schedule_smolvlm2_vision_cuda_sm80"
+            tuning_dir.mkdir(parents=True, exist_ok=True)
+            if tvm_tuning_trials <= 0:
+                raise RuntimeError("MetaSchedule requires --tvm-tuning-trials > 0")
+            database = meta_schedule.relay_integration.tune_relay(
+                mod=mod,
+                target=target,
+                work_dir=str(tuning_dir),
+                max_trials_global=tvm_tuning_trials,
+                num_trials_per_iter=min(64, tvm_tuning_trials),
+                params=params,
+                strategy="evolutionary",
+                opt_level=3,
             )
-            tmp_log = tuning_log.with_suffix(".tmp.log")
-            if tmp_log.exists():
-                tmp_log.unlink()
-            for task_idx, task in enumerate(tasks):
-                trials = min(autotvm_trials, len(task.config_space))
-                tuner = autotvm.tuner.RandomTuner(task)
-                tuner.tune(
-                    n_trial=trials,
-                    measure_option=measure_option,
-                    callbacks=[
-                        autotvm.callback.progress_bar(trials, prefix=f"[Task {task_idx + 1}/{len(tasks)}] "),
-                        autotvm.callback.log_to_file(str(tmp_log)),
-                    ],
-                )
-            autotvm.record.pick_best(str(tmp_log), str(tuning_log))
-            tmp_log.unlink(missing_ok=True)
-            result["autotvm_log"] = str(tuning_log)
+            lib = meta_schedule.relay_integration.compile_relay(
+                database=database,
+                mod=mod,
+                target=target,
+                params=params,
+                opt_level=3,
+            )
+            record_count = 0
+            try:
+                record_count = len(database.get_all_tuning_records())
+            except Exception:
+                record_count = sum(1 for _ in tuning_dir.rglob("*.json"))
+            if record_count == 0:
+                raise RuntimeError("MetaSchedule completed without any tuning records")
+            artifact = work_dir / "artifacts" / "smolvlm2_vision_tvm_metaschedule_cuda_sm80.so"
+            result.update(
+                {
+                    "tuning_backend": "meta_schedule",
+                    "meta_schedule_work_dir": str(tuning_dir),
+                    "meta_schedule_records": record_count,
+                }
+            )
+        else:
+            assert autotvm is not None
 
-        build_context = autotvm.apply_history_best(str(tuning_log)) if tuning_log.exists() else tvm.transform.PassContext()
-        with build_context:
-            with tvm.transform.PassContext(opt_level=3):
-                lib = relay.build(mod, target=target, params=params)
-        artifact = work_dir / "artifacts" / "smolvlm2_vision_tvm_autotvm_cuda_sm80.so"
+            tuning_log = work_dir / "artifacts" / "autotvm_smolvlm2_vision_cuda_sm80.log"
+            tuning_log.parent.mkdir(parents=True, exist_ok=True)
+            tasks = autotvm.task.extract_from_program(
+                mod["main"],
+                target=target,
+                params=params,
+                ops=(relay.op.get("nn.conv2d"), relay.op.get("nn.dense"), relay.op.get("nn.batch_matmul")),
+            )
+            result["autotvm_tasks"] = [
+                {
+                    "name": task.name,
+                    "workload": str(task.workload),
+                    "config_space": len(task.config_space),
+                }
+                for task in tasks
+            ]
+            if not tasks:
+                error = "AutoTVM extracted zero tunable Relay tasks from the vision tower"
+                result.update({"status": "no_autotvm_tasks", "error": error})
+                if require_tvm:
+                    raise RuntimeError(error)
+                return result
+
+            if tasks and tvm_tuning_trials > 0:
+                measure_option = autotvm.measure_option(
+                    builder=autotvm.LocalBuilder(timeout=20),
+                    runner=autotvm.LocalRunner(number=5, repeat=1, timeout=20, min_repeat_ms=150),
+                )
+                tmp_log = tuning_log.with_suffix(".tmp.log")
+                if tmp_log.exists():
+                    tmp_log.unlink()
+                for task_idx, task in enumerate(tasks):
+                    trials = min(tvm_tuning_trials, len(task.config_space))
+                    tuner = autotvm.tuner.RandomTuner(task)
+                    tuner.tune(
+                        n_trial=trials,
+                        measure_option=measure_option,
+                        callbacks=[
+                            autotvm.callback.progress_bar(trials, prefix=f"[Task {task_idx + 1}/{len(tasks)}] "),
+                            autotvm.callback.log_to_file(str(tmp_log)),
+                        ],
+                    )
+                autotvm.record.pick_best(str(tmp_log), str(tuning_log))
+                tmp_log.unlink(missing_ok=True)
+                result["autotvm_log"] = str(tuning_log)
+
+            build_context = autotvm.apply_history_best(str(tuning_log)) if tuning_log.exists() else tvm.transform.PassContext()
+            with build_context:
+                with tvm.transform.PassContext(opt_level=3):
+                    lib = relay.build(mod, target=target, params=params)
+            artifact = work_dir / "artifacts" / "smolvlm2_vision_tvm_autotvm_cuda_sm80.so"
+            result["tuning_backend"] = "autotvm"
+
         artifact.parent.mkdir(parents=True, exist_ok=True)
         lib.export_library(str(artifact))
 
@@ -387,7 +441,7 @@ def compile_and_benchmark_tvm(
                 "artifact": str(artifact),
                 "mean_ms": mean_ms,
                 "results": [float(x * 1000.0) for x in prof.results],
-                "speed_note": "AutoTVM-tuned TVM graph executor benchmark for the fixed-shape vision tower only.",
+                "speed_note": "TVM auto-tuned graph executor benchmark for the fixed-shape vision tower only.",
             }
         )
     except Exception as exc:
@@ -511,7 +565,7 @@ def write_summary(work_dir: Path, results: dict[str, Any]) -> None:
         "## Compiler Strategy",
         "",
         "- TVM Relay compiles the fixed-shape SmolVLM2 vision tower for CUDA `sm_80`.",
-        "- AutoTVM extracts Relay tasks from the vision graph, tunes CUDA schedules, and rebuilds with the best tuning log.",
+        "- TVM auto-tuning uses MetaSchedule on current TVM builds, or AutoTVM if an older build exposes it, then rebuilds with measured schedules.",
         "- End-to-end text generation is benchmarked as native PyTorch and as a TorchInductor path; TVM is reported as a vision-tower microbenchmark because `generate()` is a dynamic autoregressive loop.",
         "- Accuracy is a lightweight keyword-hit score for the three demo videos, used only as a reproducible smoke benchmark.",
         "",
@@ -538,8 +592,14 @@ def write_summary(work_dir: Path, results: dict[str, Any]) -> None:
     )
     if tvm_result.get("artifact"):
         lines.append(f"- Artifact: `{tvm_result['artifact']}`")
+    if tvm_result.get("tuning_backend"):
+        lines.append(f"- Tuning backend: `{tvm_result['tuning_backend']}`")
     if tvm_result.get("autotvm_log"):
         lines.append(f"- AutoTVM log: `{tvm_result['autotvm_log']}`")
+    if tvm_result.get("meta_schedule_work_dir"):
+        lines.append(f"- MetaSchedule work dir: `{tvm_result['meta_schedule_work_dir']}`")
+    if tvm_result.get("meta_schedule_records") is not None:
+        lines.append(f"- MetaSchedule records: `{tvm_result['meta_schedule_records']}`")
     if "autotvm_tasks" in tvm_result:
         lines.append(f"- AutoTVM tasks: `{len(tvm_result['autotvm_tasks'])}`")
     if tvm_result.get("error"):
@@ -560,9 +620,12 @@ def main() -> None:
     parser.add_argument("--bench-iters", type=int, default=5)
     parser.add_argument("--demo-seconds", type=float, default=10.0)
     parser.add_argument("--video-sample-frames", type=int, default=8)
-    parser.add_argument("--autotvm-trials", type=int, default=64)
+    parser.add_argument("--tvm-tuning-trials", type=int, default=64)
+    parser.add_argument("--autotvm-trials", type=int, default=None, help=argparse.SUPPRESS)
     parser.add_argument("--allow-tvm-failure", action="store_true")
     args = parser.parse_args()
+    if args.autotvm_trials is not None:
+        args.tvm_tuning_trials = args.autotvm_trials
 
     args.work_dir.mkdir(parents=True, exist_ok=True)
     processor, model = load_model(args.model_id)
@@ -580,7 +643,7 @@ def main() -> None:
         vision_input,
         args.work_dir,
         args.bench_iters,
-        args.autotvm_trials,
+        args.tvm_tuning_trials,
         require_tvm=not args.allow_tvm_failure,
     )
 
@@ -648,7 +711,7 @@ def main() -> None:
         "prompt": args.prompt,
         "max_new_tokens": args.max_new_tokens,
         "video_sample_frames": args.video_sample_frames,
-        "autotvm_trials": args.autotvm_trials,
+        "tvm_tuning_trials": args.tvm_tuning_trials,
         "vision_module": vision_name,
         "optimized_method": optimized_method,
         "torch_vision": torch_vision_stats,

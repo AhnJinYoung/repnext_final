@@ -23,8 +23,9 @@ tqdm==4.67.1
 transformers==4.52.4
 
 # TVM wheels vary by CUDA/Python build. The runner script installs apache-tvm
-# and then verifies that tvm.relay, tvm.autotvm, and CUDA runtime support are
-# actually available before running the benchmark.
+# and then verifies that tvm.relay, a TVM tuning module (MetaSchedule or
+# AutoTVM), and CUDA runtime support are actually available before running the
+# benchmark.
 #
 # Do not add PyAV (`av`) as a hard requirement here. Some servers cannot fetch
 # a compatible wheel and then try to build against system FFmpeg development

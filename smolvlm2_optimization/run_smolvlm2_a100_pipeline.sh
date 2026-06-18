@@ -10,7 +10,7 @@ MAX_NEW_TOKENS="${MAX_NEW_TOKENS:-64}"
 BENCH_ITERS="${BENCH_ITERS:-5}"
 DEMO_SECONDS="${DEMO_SECONDS:-10}"
 VIDEO_SAMPLE_FRAMES="${VIDEO_SAMPLE_FRAMES:-8}"
-AUTOTVM_TRIALS="${AUTOTVM_TRIALS:-64}"
+TVM_TUNING_TRIALS="${TVM_TUNING_TRIALS:-${AUTOTVM_TRIALS:-64}}"
 VIDEO_DIR="${VIDEO_DIR:-${ROOT_DIR}/demo/video_sources_eye_new}"
 
 VIDEOS=(
@@ -29,9 +29,11 @@ python -m pip install -r "${SMOL_DIR}/requirements-smolvlm2.txt"
 
 if ! python - <<'PY'
 import importlib
+import importlib.util
 import tvm
-autotvm = importlib.import_module("tvm.autotvm")
 relay = importlib.import_module("tvm.relay")
+if importlib.util.find_spec("tvm.autotvm") is None and importlib.util.find_spec("tvm.meta_schedule") is None:
+    raise ImportError("neither tvm.autotvm nor tvm.meta_schedule is available")
 from tvm.contrib import graph_executor
 assert tvm.runtime.enabled("cuda"), "TVM was installed without CUDA runtime support"
 PY
@@ -42,15 +44,21 @@ fi
 
 python - <<'PY'
 import importlib
+import importlib.util
 import tvm
-autotvm = importlib.import_module("tvm.autotvm")
 relay = importlib.import_module("tvm.relay")
+has_autotvm = importlib.util.find_spec("tvm.autotvm") is not None
+has_meta_schedule = importlib.util.find_spec("tvm.meta_schedule") is not None
+if not has_autotvm and not has_meta_schedule:
+    raise SystemExit("TVM has neither AutoTVM nor MetaSchedule. Install a TVM build with an auto-tuning module.")
 from tvm.contrib import graph_executor
 if not tvm.runtime.enabled("cuda"):
     raise SystemExit("TVM CUDA runtime is not enabled. Install a CUDA-enabled TVM wheel/build before running.")
 print("TVM:", getattr(tvm, "__version__", "unknown"), "CUDA enabled:", tvm.runtime.enabled("cuda"))
 print("TVM path:", tvm.__file__)
-print("Relay/AutoTVM import check: ok")
+print("Relay import check: ok")
+print("AutoTVM available:", has_autotvm)
+print("MetaSchedule available:", has_meta_schedule)
 PY
 
 if ! command -v nvcc >/dev/null 2>&1; then
@@ -75,5 +83,5 @@ python "${SMOL_DIR}/smolvlm2_tvm_pipeline.py" \
   --bench-iters "${BENCH_ITERS}" \
   --demo-seconds "${DEMO_SECONDS}" \
   --video-sample-frames "${VIDEO_SAMPLE_FRAMES}" \
-  --autotvm-trials "${AUTOTVM_TRIALS}" \
+  --tvm-tuning-trials "${TVM_TUNING_TRIALS}" \
   --videos "${VIDEOS[@]}"

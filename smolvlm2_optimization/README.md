@@ -46,7 +46,8 @@ The script performs all required stages:
 
 1. Creates a Python virtual environment under
    `smolvlm2_optimization/runs/a100_smolvlm2_2b/.venv`.
-2. Installs PyTorch CUDA, Transformers, video IO, TVM, and optional FlashAttention.
+2. Installs PyTorch CUDA, Transformers, video IO, legacy Relay-compatible TVM,
+   and optional FlashAttention.
 3. Downloads `HuggingFaceTB/SmolVLM2-2.2B-Instruct`.
 4. Compiles the vision tower with TVM for CUDA `sm_80`.
 5. Runs native and optimized generation on the three final demo videos.
@@ -63,6 +64,11 @@ VIDEO_SAMPLE_FRAMES=8 \
 TVM_TUNING_TRIALS=64 \
 bash smolvlm2_optimization/run_smolvlm2_a100_pipeline.sh
 ```
+
+The script defaults to `TVM_PIP_PACKAGE=apache-tvm==0.14.dev273` because this
+project uses Relay/AutoTVM APIs. Do not let pip resolve to `apache-tvm`
+`0.25.0rc*`; those wheels use the newer Unity/Relax package layout and do not
+provide `tvm.relay` for this pipeline.
 
 ## Outputs
 

@@ -22,10 +22,12 @@ torchvision==0.20.1+cu121
 tqdm==4.67.1
 transformers==4.52.4
 
-# TVM wheels vary by CUDA/Python build. The runner script installs apache-tvm
-# and then verifies that tvm.relay, a TVM tuning module (MetaSchedule or
-# AutoTVM), and CUDA runtime support are actually available before running the
-# benchmark.
+# TVM wheels vary by CUDA/Python build. The runner script pins the legacy
+# Relay/AutoTVM-compatible package as apache-tvm==0.14.dev273 by default, then
+# verifies that tvm.relay, a TVM tuning module, and CUDA runtime support are
+# actually available before running the benchmark. The newer apache-tvm
+# 0.25.0rc* wheels use the Unity/Relax stack and do not expose tvm.relay in the
+# same way, so they are intentionally not used here.
 #
 # Do not add PyAV (`av`) as a hard requirement here. Some servers cannot fetch
 # a compatible wheel and then try to build against system FFmpeg development

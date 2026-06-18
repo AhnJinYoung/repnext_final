@@ -11,6 +11,7 @@ BENCH_ITERS="${BENCH_ITERS:-5}"
 DEMO_SECONDS="${DEMO_SECONDS:-10}"
 VIDEO_SAMPLE_FRAMES="${VIDEO_SAMPLE_FRAMES:-8}"
 TVM_TUNING_TRIALS="${TVM_TUNING_TRIALS:-${AUTOTVM_TRIALS:-64}}"
+TVM_PIP_PACKAGE="${TVM_PIP_PACKAGE:-apache-tvm==0.14.dev273}"
 VIDEO_DIR="${VIDEO_DIR:-${ROOT_DIR}/demo/video_sources_eye_new}"
 
 VIDEOS=(
@@ -39,7 +40,7 @@ assert tvm.runtime.enabled("cuda"), "TVM was installed without CUDA runtime supp
 PY
 then
   python -m pip uninstall -y tvm apache-tvm tlcpack-nightly tlcpack-nightly-cu121 || true
-  python -m pip install apache-tvm
+  python -m pip install --pre "${TVM_PIP_PACKAGE}"
 fi
 
 python - <<'PY'
@@ -53,7 +54,11 @@ if not has_autotvm and not has_meta_schedule:
     raise SystemExit("TVM has neither AutoTVM nor MetaSchedule. Install a TVM build with an auto-tuning module.")
 from tvm.contrib import graph_executor
 if not tvm.runtime.enabled("cuda"):
-    raise SystemExit("TVM CUDA runtime is not enabled. Install a CUDA-enabled TVM wheel/build before running.")
+    raise SystemExit(
+        "TVM CUDA runtime is not enabled. The selected TVM package exposes Relay/AutoTVM, "
+        "but it was not built with CUDA. Install a CUDA-enabled TVM build and rerun with "
+        "TVM_PIP_PACKAGE pointing to that wheel, or build TVM from source with USE_CUDA=ON."
+    )
 print("TVM:", getattr(tvm, "__version__", "unknown"), "CUDA enabled:", tvm.runtime.enabled("cuda"))
 print("TVM path:", tvm.__file__)
 print("Relay import check: ok")

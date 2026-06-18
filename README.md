@@ -8,6 +8,9 @@ Final deliverable repo for optimizing RepNeXt-M5 ADE20K semantic segmentation on
 
 The main write-up is [report.tex](report.tex).
 
+Korean end-to-end reproduction and user manual:
+[USER_MANUAL_KO.md](USER_MANUAL_KO.md).
+
 ## Main Results
 
 | Track | Easy name | Latency | Accuracy | Meaning |

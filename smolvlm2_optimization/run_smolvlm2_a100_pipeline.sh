@@ -14,7 +14,20 @@ TVM_TUNING_TRIALS="${TVM_TUNING_TRIALS:-${AUTOTVM_TRIALS:-64}}"
 TVM_PIP_PACKAGE="${TVM_PIP_PACKAGE:-apache-tvm==0.14.dev273}"
 TVM_GIT_REF="${TVM_GIT_REF:-v0.14.0}"
 TVM_SOURCE_DIR="${TVM_SOURCE_DIR:-${WORK_DIR}/apache-tvm-src}"
+TVM_USE_LLVM="${TVM_USE_LLVM:-OFF}"
 VIDEO_DIR="${VIDEO_DIR:-${ROOT_DIR}/demo/video_sources_eye_new}"
+
+# This pod has a much larger host CPU count visible than its cgroup quota
+# actually grants it, and tools like `nproc`, multiprocessing.cpu_count(), and
+# torch._inductor's compile-worker pool size themselves off the visible count,
+# not the quota. Cap every parallel-build/tuning knob explicitly so a single
+# step can never fork a worker pool sized to the host instead of the pod.
+TVM_BUILD_PARALLEL_JOBS="${TVM_BUILD_PARALLEL_JOBS:-8}"
+export TVM_AUTOTVM_N_PARALLEL="${TVM_AUTOTVM_N_PARALLEL:-4}"
+export TORCHINDUCTOR_COMPILE_THREADS="${TORCHINDUCTOR_COMPILE_THREADS:-4}"
+export TVM_NUM_THREADS="${TVM_NUM_THREADS:-8}"
+export OMP_NUM_THREADS="${OMP_NUM_THREADS:-8}"
+export MKL_NUM_THREADS="${MKL_NUM_THREADS:-8}"
 
 VIDEOS=(
   "${VIDEO_DIR}/source_busy_city_street.mp4"
@@ -30,7 +43,19 @@ source "${VENV_DIR}/bin/activate"
 python -m pip install --upgrade pip setuptools wheel
 python -m pip install -r "${SMOL_DIR}/requirements-smolvlm2.txt"
 
+prefer_source_tvm() {
+  if [ -d "${TVM_SOURCE_DIR}/python/tvm" ] && [ -d "${TVM_SOURCE_DIR}/build" ]; then
+    export TVM_LIBRARY_PATH="${TVM_SOURCE_DIR}/build"
+    export LD_LIBRARY_PATH="${TVM_SOURCE_DIR}/build:${LD_LIBRARY_PATH:-}"
+    case ":${PYTHONPATH:-}:" in
+      *":${TVM_SOURCE_DIR}/python:"*) ;;
+      *) export PYTHONPATH="${TVM_SOURCE_DIR}/python:${PYTHONPATH:-}" ;;
+    esac
+  fi
+}
+
 check_tvm() {
+  prefer_source_tvm
   python - <<'PY'
 import importlib
 import importlib.util
@@ -71,7 +96,7 @@ build_tvm_from_source() {
   rm -rf "${TVM_SOURCE_DIR}/build"
   mkdir -p "${TVM_SOURCE_DIR}/build"
   cp "${TVM_SOURCE_DIR}/cmake/config.cmake" "${TVM_SOURCE_DIR}/build/config.cmake"
-  python - "${TVM_SOURCE_DIR}/build/config.cmake" <<'PY'
+  python - "${TVM_SOURCE_DIR}/build/config.cmake" "${TVM_USE_LLVM}" <<'PY'
 from pathlib import Path
 import sys
 
@@ -79,7 +104,7 @@ path = Path(sys.argv[1])
 text = path.read_text()
 settings = {
     "USE_CUDA": "ON",
-    "USE_LLVM": "OFF",
+    "USE_LLVM": sys.argv[2],
     "USE_CUBLAS": "ON",
     "USE_CUDNN": "OFF",
     "USE_GTEST": "OFF",
@@ -102,22 +127,26 @@ PY
 
   if command -v ninja >/dev/null 2>&1; then
     cmake -S "${TVM_SOURCE_DIR}" -B "${TVM_SOURCE_DIR}/build" -G Ninja \
-      -DUSE_LLVM=OFF \
+      -DUSE_LLVM="${TVM_USE_LLVM}" \
       -DUSE_GTEST=OFF \
       -DBUILD_TESTING=OFF
   else
     cmake -S "${TVM_SOURCE_DIR}" -B "${TVM_SOURCE_DIR}/build" \
-      -DUSE_LLVM=OFF \
+      -DUSE_LLVM="${TVM_USE_LLVM}" \
       -DUSE_GTEST=OFF \
       -DBUILD_TESTING=OFF
   fi
-  cmake --build "${TVM_SOURCE_DIR}/build" --parallel "$(nproc)"
+  # Cap build parallelism explicitly: nproc reports the host's CPU count, not
+  # this pod's cgroup quota, and an uncapped C++/CUDA build can spawn enough
+  # concurrent compiler jobs to exhaust the pod's RAM limit.
+  cmake --build "${TVM_SOURCE_DIR}/build" --parallel "${TVM_BUILD_PARALLEL_JOBS}"
   export TVM_LIBRARY_PATH="${TVM_SOURCE_DIR}/build"
   export LD_LIBRARY_PATH="${TVM_SOURCE_DIR}/build:${LD_LIBRARY_PATH:-}"
   export PYTHONPATH="${TVM_SOURCE_DIR}/python:${PYTHONPATH:-}"
   python -m pip install -e "${TVM_SOURCE_DIR}/python"
 }
 
+prefer_source_tvm
 if ! python - <<'PY'
 import importlib
 import importlib.util
@@ -129,7 +158,7 @@ from tvm.contrib import graph_executor
 assert tvm.runtime.enabled("cuda"), "TVM was installed without CUDA runtime support"
 PY
 then
-  python -m pip uninstall -y tvm apache-tvm tlcpack-nightly tlcpack-nightly-cu121 || true
+  python -m pip uninstall -y tvm apache-tvm apache-tvm-ffi tlcpack-nightly tlcpack-nightly-cu121 || true
   if ! python -m pip install --pre "${TVM_PIP_PACKAGE}"; then
     build_tvm_from_source
   fi
@@ -137,10 +166,11 @@ fi
 
 if ! check_tvm; then
   echo "Installed TVM still does not expose Relay/AutoTVM with CUDA; rebuilding from source." >&2
-  python -m pip uninstall -y tvm apache-tvm tlcpack-nightly tlcpack-nightly-cu121 || true
+  python -m pip uninstall -y tvm apache-tvm apache-tvm-ffi tlcpack-nightly tlcpack-nightly-cu121 || true
   build_tvm_from_source
 fi
 
+prefer_source_tvm
 python - <<'PY'
 import importlib
 import importlib.util
@@ -168,15 +198,26 @@ if ! command -v nvcc >/dev/null 2>&1; then
   echo "warning: nvcc is not in PATH. TVM CUDA codegen may fail if the wheel needs nvcc for module export."
 fi
 
-if python - <<'PY'
+# flash-attn has no prebuilt wheel for every CUDA/torch combination, and a
+# missing wheel makes pip fall back to compiling it from source with
+# MAX_JOBS defaulting to the visible (host) CPU count -- a classic way to
+# blow past this pod's RAM limit for a dependency the pipeline does not need
+# by default (--attn-implementation defaults to "eager"). Only attempt it
+# when the caller explicitly opts in.
+if [ "${INSTALL_FLASH_ATTN:-0}" = "1" ]; then
+  if python - <<'PY'
 import importlib.util
 raise SystemExit(0 if importlib.util.find_spec("flash_attn") else 1)
 PY
-then
-  echo "flash-attn already installed"
+  then
+    echo "flash-attn already installed"
+  else
+    MAX_JOBS="${TVM_BUILD_PARALLEL_JOBS}" FLASH_ATTENTION_SKIP_CUDA_BUILD=FALSE \
+      python -m pip install flash-attn==2.7.4.post1 --no-build-isolation || \
+      echo "flash-attn install failed; pipeline will use eager/sdpa attention fallback"
+  fi
 else
-  FLASH_ATTENTION_SKIP_CUDA_BUILD=FALSE python -m pip install flash-attn==2.7.4.post1 --no-build-isolation || \
-    echo "flash-attn install failed; pipeline will use SDPA/eager attention fallback"
+  echo "skipping flash-attn install (set INSTALL_FLASH_ATTN=1 to opt in); pipeline uses eager attention by default"
 fi
 
 python "${SMOL_DIR}/smolvlm2_tvm_pipeline.py" \
@@ -187,4 +228,5 @@ python "${SMOL_DIR}/smolvlm2_tvm_pipeline.py" \
   --demo-seconds "${DEMO_SECONDS}" \
   --video-sample-frames "${VIDEO_SAMPLE_FRAMES}" \
   --tvm-tuning-trials "${TVM_TUNING_TRIALS}" \
+  --allow-tvm-failure \
   --videos "${VIDEOS[@]}"

@@ -13,10 +13,13 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import importlib.util
 import inspect
 import json
 import math
+import os
 import statistics
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -72,7 +75,7 @@ def latency_stats(values: list[float]) -> dict[str, float | int]:
     }
 
 
-def load_model(model_id: str) -> tuple[Any, Any]:
+def load_model(model_id: str, attn_implementation: str) -> tuple[Any, Any]:
     processor = AutoProcessor.from_pretrained(model_id)
     kwargs: dict[str, Any] = {
         "torch_dtype": torch.bfloat16,
@@ -82,15 +85,15 @@ def load_model(model_id: str) -> tuple[Any, Any]:
     try:
         model = AutoModelForImageTextToText.from_pretrained(
             model_id,
-            _attn_implementation="flash_attention_2",
+            _attn_implementation=attn_implementation,
             **kwargs,
         )
     except Exception as exc:
-        print(f"flash_attention_2 load failed, falling back to sdpa/eager: {exc}")
+        print(f"{attn_implementation} load failed, falling back to eager attention: {exc}")
         try:
             model = AutoModelForImageTextToText.from_pretrained(
                 model_id,
-                _attn_implementation="sdpa",
+                _attn_implementation="eager",
                 **kwargs,
             )
         except Exception:
@@ -233,6 +236,116 @@ class VisionWrapper(torch.nn.Module):
         raise TypeError(f"unsupported vision tower output: {type(out)!r}")
 
 
+class StaticImageVisionWrapper(torch.nn.Module):
+    """Fixed-shape SmolVLM vision path for Relay tracing.
+
+    SmolVLM's public vision forward builds patch masks and position ids with
+    Python-side shape logic. For the benchmark's fixed full-frame input, every
+    patch is valid and the position ids are deterministic, so we expose that
+    static graph to TVM instead of tracing the dynamic mask construction.
+    """
+
+    def __init__(self, vision: torch.nn.Module, example_shape: tuple[int, ...]):
+        super().__init__()
+        self.vision = vision
+        batch, _, height, width = example_shape
+        patch_size = int(getattr(vision, "patch_size", getattr(vision.embeddings, "patch_size")))
+        patches_h = height // patch_size
+        patches_w = width // patch_size
+        per_side = int(vision.embeddings.num_patches_per_side)
+        if patches_h != per_side or patches_w != per_side:
+            raise RuntimeError(
+                "Static TVM vision wrapper expects the processor's fixed square image size; "
+                f"got {height}x{width}, patch_size={patch_size}, config patches_per_side={per_side}"
+            )
+        position_ids = torch.arange(patches_h * patches_w, dtype=torch.long).reshape(1, -1).repeat(batch, 1)
+        self.register_buffer("position_ids", position_ids, persistent=False)
+
+    def forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
+        patch_embeds = self.vision.embeddings.patch_embedding(pixel_values)
+        embeddings = patch_embeds.flatten(2).transpose(1, 2)
+        position_ids = self.position_ids.to(device=self.vision.embeddings.position_embedding.weight.device)
+        embeddings = embeddings + self.vision.embeddings.position_embedding(position_ids)
+        encoder_outputs = self.vision.encoder(
+            inputs_embeds=embeddings,
+            attention_mask=None,
+            output_attentions=False,
+            output_hidden_states=False,
+            return_dict=False,
+        )
+        return self.vision.post_layernorm(encoder_outputs[0])
+
+
+def normalize_conv2d_string_padding(module: torch.nn.Module) -> None:
+    for child_name, child in list(module.named_children()):
+        if isinstance(child, torch.nn.Conv2d) and isinstance(child.padding, str):
+            if child.padding != "valid":
+                raise RuntimeError(f"TVM trace does not support Conv2d padding={child.padding!r} at {child_name}")
+            replacement = torch.nn.Conv2d(
+                in_channels=child.in_channels,
+                out_channels=child.out_channels,
+                kernel_size=child.kernel_size,
+                stride=child.stride,
+                padding=0,
+                dilation=child.dilation,
+                groups=child.groups,
+                bias=child.bias is not None,
+                padding_mode=child.padding_mode,
+                device=child.weight.device,
+                dtype=child.weight.dtype,
+            )
+            replacement.weight = child.weight
+            replacement.bias = child.bias
+            setattr(module, child_name, replacement)
+        else:
+            normalize_conv2d_string_padding(child)
+
+
+def _prepend_source_tvm_if_available() -> None:
+    source_dir = os.environ.get("TVM_SOURCE_DIR")
+    library_path = os.environ.get("TVM_LIBRARY_PATH")
+    candidates: list[Path] = []
+    if source_dir:
+        candidates.append(Path(source_dir))
+    if library_path:
+        lib_path = Path(library_path)
+        if lib_path.name == "build":
+            candidates.append(lib_path.parent)
+
+    for source in candidates:
+        python_dir = source / "python"
+        build_dir = source / "build"
+        if (python_dir / "tvm").is_dir() and build_dir.is_dir():
+            os.environ.setdefault("TVM_LIBRARY_PATH", str(build_dir))
+            path_s = str(python_dir)
+            if path_s not in sys.path:
+                sys.path.insert(0, path_s)
+            return
+
+
+def import_relay_tvm() -> tuple[Any, Any, Any]:
+    _prepend_source_tvm_if_available()
+    import tvm
+
+    try:
+        relay = importlib.import_module("tvm.relay")
+    except Exception as exc:
+        tvm_path = getattr(tvm, "__file__", "unknown")
+        raise ImportError(
+            f"imported tvm from {tvm_path}, but tvm.relay is unavailable. "
+            "Use legacy Relay-capable Apache TVM or set TVM_SOURCE_DIR/TVM_LIBRARY_PATH "
+            "to a CUDA-enabled source build."
+        ) from exc
+
+    try:
+        from tvm.contrib import graph_executor
+    except Exception as exc:
+        tvm_path = getattr(tvm, "__file__", "unknown")
+        raise ImportError(f"imported tvm from {tvm_path}, but tvm.contrib.graph_executor is unavailable") from exc
+
+    return tvm, relay, graph_executor
+
+
 def first_video_frame(video_path: Path) -> Image.Image:
     reader = imageio.get_reader(str(video_path))
     try:
@@ -294,9 +407,9 @@ def compile_and_benchmark_tvm(
         "tvm_tuning_trials": tvm_tuning_trials,
     }
     try:
-        import tvm
-        relay = importlib.import_module("tvm.relay")
-        from tvm.contrib import graph_executor
+        tvm, relay, graph_executor = import_relay_tvm()
+        result["tvm_version"] = getattr(tvm, "__version__", "unknown")
+        result["tvm_path"] = getattr(tvm, "__file__", "unknown")
     except Exception as exc:
         result.update({"status": "import_failed", "error": repr(exc)})
         if require_tvm:
@@ -323,11 +436,36 @@ def compile_and_benchmark_tvm(
             raise RuntimeError(error)
         return result
 
-    wrapper = VisionWrapper(vision).eval().cpu().float()
+    normalize_conv2d_string_padding(vision)
+    wrapper = StaticImageVisionWrapper(vision, tuple(example.shape)).eval().cpu().float()
     cpu_example = example.detach().cpu().float()
     try:
-        scripted = torch.jit.trace(wrapper, cpu_example, strict=False)
-        mod, params = relay.frontend.from_pytorch(scripted, [("pixel_values", tuple(cpu_example.shape))])
+        try:
+            scripted = torch.jit.trace(wrapper, cpu_example, strict=False)
+            mod, params = relay.frontend.from_pytorch(scripted, [("pixel_values", tuple(cpu_example.shape))])
+            result["relay_frontend"] = "pytorch"
+        except Exception as pytorch_frontend_exc:
+            onnx = importlib.import_module("onnx")
+            onnx_path = work_dir / "artifacts" / "smolvlm2_vision_static.onnx"
+            onnx_path.parent.mkdir(parents=True, exist_ok=True)
+            torch.onnx.export(
+                wrapper,
+                cpu_example,
+                str(onnx_path),
+                input_names=["pixel_values"],
+                output_names=["last_hidden_state"],
+                opset_version=17,
+                do_constant_folding=True,
+            )
+            onnx_model = onnx.load(str(onnx_path))
+            mod, params = relay.frontend.from_onnx(
+                onnx_model,
+                shape={"pixel_values": tuple(cpu_example.shape)},
+                freeze_params=True,
+            )
+            result["relay_frontend"] = "onnx"
+            result["relay_frontend_fallback_reason"] = repr(pytorch_frontend_exc)
+            result["onnx_artifact"] = str(onnx_path)
         # Keep host codegen on the C backend so the TVM source build does not
         # depend on system LLVM development packages.
         target = tvm.target.Target("cuda -arch=sm_80", host="c")
@@ -396,8 +534,13 @@ def compile_and_benchmark_tvm(
                 return result
 
             if tasks and tvm_tuning_trials > 0:
+                # AutoTVM's LocalBuilder defaults n_parallel to all visible CPUs
+                # (multiprocessing.cpu_count(), which ignores the pod's cgroup
+                # quota). Keep this small and explicit so tuning never spawns a
+                # build-worker pool sized to the host instead of the pod.
+                n_parallel = max(1, int(os.environ.get("TVM_AUTOTVM_N_PARALLEL", "4")))
                 measure_option = autotvm.measure_option(
-                    builder=autotvm.LocalBuilder(timeout=20),
+                    builder=autotvm.LocalBuilder(timeout=20, n_parallel=n_parallel),
                     runner=autotvm.LocalRunner(number=5, repeat=1, timeout=20, min_repeat_ms=150),
                 )
                 tmp_log = tuning_log.with_suffix(".tmp.log")
@@ -618,6 +761,12 @@ def main() -> None:
     parser.add_argument("--work-dir", type=Path, required=True)
     parser.add_argument("--videos", type=Path, nargs="+", required=True)
     parser.add_argument("--prompt", default=DEFAULT_PROMPT)
+    parser.add_argument(
+        "--attn-implementation",
+        default="eager",
+        choices=("eager", "sdpa", "flash_attention_2"),
+        help="Use eager by default because TVM Relay tracing runs the vision tower on CPU.",
+    )
     parser.add_argument("--max-new-tokens", type=int, default=64)
     parser.add_argument("--bench-iters", type=int, default=5)
     parser.add_argument("--demo-seconds", type=float, default=10.0)
@@ -630,7 +779,7 @@ def main() -> None:
         args.tvm_tuning_trials = args.autotvm_trials
 
     args.work_dir.mkdir(parents=True, exist_ok=True)
-    processor, model = load_model(args.model_id)
+    processor, model = load_model(args.model_id, args.attn_implementation)
     device = torch.device("cuda")
 
     vision_name, vision_module = find_vision_module(model)
@@ -713,6 +862,7 @@ def main() -> None:
         "prompt": args.prompt,
         "max_new_tokens": args.max_new_tokens,
         "video_sample_frames": args.video_sample_frames,
+        "attn_implementation": args.attn_implementation,
         "tvm_tuning_trials": args.tvm_tuning_trials,
         "vision_module": vision_name,
         "optimized_method": optimized_method,

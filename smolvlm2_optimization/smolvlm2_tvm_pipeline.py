@@ -466,9 +466,12 @@ def compile_and_benchmark_tvm(
             result["relay_frontend"] = "onnx"
             result["relay_frontend_fallback_reason"] = repr(pytorch_frontend_exc)
             result["onnx_artifact"] = str(onnx_path)
-        # Keep host codegen on the C backend so the TVM source build does not
-        # depend on system LLVM development packages.
-        target = tvm.target.Target("cuda -arch=sm_80", host="c")
+        # Use the LLVM host backend. The C backend ("c") avoids a build-time
+        # LLVM dependency but emits host C that the system compiler rejects for
+        # some fused ops (e.g. tvmgen_default_fused_mean), whereas LLVM host
+        # codegen is the well-tested path. This requires TVM built with
+        # USE_LLVM=ON (see RUNBOOK.md).
+        target = tvm.target.Target("cuda -arch=sm_80", host="llvm")
 
         if meta_schedule is not None:
             tuning_dir = work_dir / "artifacts" / "meta_schedule_smolvlm2_vision_cuda_sm80"
@@ -534,23 +537,42 @@ def compile_and_benchmark_tvm(
                 return result
 
             if tasks and tvm_tuning_trials > 0:
-                # AutoTVM's LocalBuilder defaults n_parallel to all visible CPUs
-                # (multiprocessing.cpu_count(), which ignores the pod's cgroup
-                # quota). Keep this small and explicit so tuning never spawns a
-                # build-worker pool sized to the host instead of the pod.
+                # Keep the build-worker pool small and explicit. AutoTVM's
+                # LocalBuilder otherwise lets n_parallel grow with the visible CPU
+                # count (which on this pod is the host's, not the cgroup quota).
+                # LocalBuilder also defaults do_fork=False, which asserts
+                # n_parallel in (None, 1); enable do_fork only when we actually ask
+                # for parallel builders so the env knob keeps working either way.
                 n_parallel = max(1, int(os.environ.get("TVM_AUTOTVM_N_PARALLEL", "4")))
+                # Tighter timeouts than the default: many randomly-sampled GPU
+                # schedules are invalid for these unusual ViT ops (huge-kernel
+                # patch conv, large fp32 batch-matmul) and a long per-measurement
+                # timeout turns a fruitless trial into a 20 s stall.
                 measure_option = autotvm.measure_option(
-                    builder=autotvm.LocalBuilder(timeout=20, n_parallel=n_parallel),
-                    runner=autotvm.LocalRunner(number=5, repeat=1, timeout=20, min_repeat_ms=150),
+                    builder=autotvm.LocalBuilder(
+                        timeout=10, n_parallel=n_parallel, do_fork=n_parallel > 1
+                    ),
+                    runner=autotvm.LocalRunner(number=5, repeat=1, timeout=10, min_repeat_ms=150),
                 )
+                # Stop a task early once it stalls (e.g. when no valid config is
+                # being found) so tuning is bounded; the final build falls back to
+                # TVM's default schedules for any task left untuned.
+                early_stopping = max(8, tvm_tuning_trials // 2)
                 tmp_log = tuning_log.with_suffix(".tmp.log")
                 if tmp_log.exists():
                     tmp_log.unlink()
                 for task_idx, task in enumerate(tasks):
                     trials = min(tvm_tuning_trials, len(task.config_space))
-                    tuner = autotvm.tuner.RandomTuner(task)
+                    # XGBTuner's cost model steers away from invalid configs far
+                    # better than uniform random sampling; fall back to RandomTuner
+                    # if the XGBoost-backed model is unavailable.
+                    try:
+                        tuner = autotvm.tuner.XGBTuner(task, loss_type="rank")
+                    except Exception:
+                        tuner = autotvm.tuner.RandomTuner(task)
                     tuner.tune(
                         n_trial=trials,
+                        early_stopping=early_stopping,
                         measure_option=measure_option,
                         callbacks=[
                             autotvm.callback.progress_bar(trials, prefix=f"[Task {task_idx + 1}/{len(tasks)}] "),

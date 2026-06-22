@@ -36,12 +36,26 @@ VIDEOS=(
 )
 
 mkdir -p "${WORK_DIR}"
-python3 -m venv "${VENV_DIR}"
+# Reuse an existing, already-provisioned venv. Recreating it with the system
+# python3 fails on this host because python3-venv/ensurepip is not installed
+# ("After installing the python3-venv package, recreate your virtual
+# environment"), and there is no reason to rebuild a venv that already has the
+# full dependency set. Only bootstrap a fresh one if it is genuinely missing.
+if [ ! -x "${VENV_DIR}/bin/python" ]; then
+  python3 -m venv "${VENV_DIR}"
+fi
 # shellcheck disable=SC1091
 source "${VENV_DIR}/bin/activate"
 
-python -m pip install --upgrade pip setuptools wheel
-python -m pip install -r "${SMOL_DIR}/requirements-smolvlm2.txt"
+# Skip the dependency (re)install when the venv is already complete. Set
+# FORCE_PIP_INSTALL=1 to force it (e.g. after editing requirements). This keeps
+# re-runs cheap and avoids a network hiccup aborting an otherwise-ready run.
+if [ "${FORCE_PIP_INSTALL:-0}" = "1" ] || ! python -c "import torch, transformers, imageio, evaluate" >/dev/null 2>&1; then
+  python -m pip install --upgrade pip setuptools wheel
+  python -m pip install -r "${SMOL_DIR}/requirements-smolvlm2.txt"
+else
+  echo "deps already present in venv; skipping pip install (set FORCE_PIP_INSTALL=1 to force)"
+fi
 
 prefer_source_tvm() {
   if [ -d "${TVM_SOURCE_DIR}/python/tvm" ] && [ -d "${TVM_SOURCE_DIR}/build" ]; then

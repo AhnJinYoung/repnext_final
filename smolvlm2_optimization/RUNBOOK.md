@@ -60,11 +60,38 @@ A100 GPU 환경에서 SmolVLM2-2.2B-Instruct 모델을:
 - 파이프라인에 `--allow-tvm-failure` 추가 → TVM 단계가 실패해도 native / TorchInductor 비교와 데모 생성은 끝까지 진행.
 
 `smolvlm2_tvm_pipeline.py`:
-- `autotvm.LocalBuilder(timeout=20, n_parallel=4)` 로 빌드 병렬도 명시 제한.
+- TVM 타겟 host를 `"c"` → **`"llvm"`** 으로 변경. 이게 TVM 동작의 핵심 (§3.1 참고).
+- `autotvm.LocalBuilder(timeout=10, n_parallel=4, do_fork=n_parallel>1)` — `LocalBuilder` 기본 `do_fork=False`는 `n_parallel∈(None,1)`을 강제하므로, 병렬 빌드를 쓸 때만 `do_fork=True`.
+- tuner를 `RandomTuner` → **`XGBTuner`** (cost-model 기반, 잘못된 GPU config 회피)로 교체 + `early_stopping`으로 시간 상한.
 
 `run_with_memguard.sh` (새 가드, §2·§4 참고).
 
-> TVM(v0.14.0, Relay+AutoTVM+CUDA)은 이미 `runs/a100_smolvlm2_2b/apache-tvm-src/build`에 빌드되어 있어 **재빌드 불필요**. PyPI 최신 `apache-tvm==0.25.0`은 `tvm.relay`/`tvm.autotvm`이 제거되어 못 쓴다 — 그래서 소스 빌드를 쓰는 것. 이미 있는 빌드를 건드리지 말 것.
+### 3.1 ⚠️ TVM은 USE_LLVM=ON 으로 빌드되어야 함 (이전 "LLVM 제거" 결정 번복)
+초기에는 시스템 LLVM 의존성을 피하려고 TVM을 `USE_LLVM=OFF` + host=`"c"`로 빌드했었다. **이 조합으로는 이 모델을 컴파일할 수 없다:**
+- Relay PyTorch frontend의 shape 추론(`infer_value`)이 **LLVM 백엔드를 요구**한다 (`assert tvm.runtime.enabled("llvm")`).
+- host=`"c"` 백엔드는 일부 fused op(예: `tvmgen_default_fused_mean`)에 대해 시스템 컴파일러가 거부하는 host C 코드를 생성한다.
+- 게다가 host=`"c"`로는 **AutoTVM 튜닝 측정도 전부 실패**(0 GFLOPS)했다 — 측정용 후보 커널 빌드가 C 백엔드에서 깨졌기 때문. host=`"llvm"`로 바꾸자 튜닝 측정이 정상화되어 수천 GFLOPS의 스케줄을 찾기 시작했다.
+
+**조치 (재현 절차):**
+```bash
+apt-get install -y llvm-14-dev                 # llvm-config-14 (14.0.0)
+cd runs/a100_smolvlm2_2b/apache-tvm-src
+sed -i 's/^set(USE_LLVM OFF)/set(USE_LLVM llvm-config-14)/' build/config.cmake
+cmake -S . -B build -G Ninja -DUSE_LLVM=llvm-config-14
+ninja -C build -j8                              # ~10분, 699 step, 메모리 안전
+```
+빌드 후 `python -c "import tvm; print(tvm.runtime.enabled('llvm'))"` → `True` 확인.
+참고: PyPI 최신 `apache-tvm==0.25.0`은 `tvm.relay`/`tvm.autotvm`이 제거되어 못 쓴다 — 그래서 v0.14.0 소스 빌드를 쓰는 것.
+
+### 3.2 결과 (2026-06-22 실행)
+| Track | Latency | 비고 |
+| --- | ---: | --- |
+| native end-to-end (`generate()`, bf16) | ~4084 ms | 실사용 latency |
+| TorchInductor end-to-end | ~4100 ms | `generate()`는 동적 루프라 사실상 native와 동급 |
+| **torch vision tower** (PyTorch, **bf16**) | **~23.5 ms** | 비교 기준선 |
+| **TVM vision tower** (AutoTVM 튜닝, **fp32**) | **~248 ms** | 튜닝 전 fallback은 ~1430ms였음 → 튜닝으로 5.8× 개선 |
+
+⚠️ **dtype 주의:** torch tower는 bf16(tensor core), TVM는 fp32로 측정되어 동등 비교가 아니다. 남은 격차의 상당 부분은 정밀도 차이(fp32 vs bf16 tensor core)이지 TVM 자체의 한계가 아니다. 동등 비교를 원하면 둘 다 같은 dtype으로 맞춰야 한다.
 
 ---
 
